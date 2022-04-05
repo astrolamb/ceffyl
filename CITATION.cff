@@ -1,0 +1,22 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: ceffyl
+message: >-
+  Please cite this software using the metadata from
+  'preferred-citation'.
+type: software
+authors:
+  - given-names: William G. Lamb
+    email: william.g.lamb@vanderbilt.edu
+    affiliation: Vanderbilt University
+    orcid: 'https://orcid.org/0000-0003-1096-4156'
+  - given-names: Stephen R. Taylor
+    affiliation: Vanderbilt University
+  - given-names: Xavier Siemens
+    affiliation: Oregon State University
+  - given-names: Michele Vallisneri
+    affiliation: JPL Caltech
+  - given-names: Joe Romano
+    affiliation: Texas Tech University

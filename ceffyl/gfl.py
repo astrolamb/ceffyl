@@ -9,6 +9,10 @@ import os
 """
 Classes to create noise signals and a parallel tempered PTMCMCSampler object
 to fit spectra to a density estimation of pulsar timing array data
+
+(\__/)
+| oo |
+( 00 )
 """
 
 class signal():
