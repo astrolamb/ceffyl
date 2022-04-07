@@ -7,7 +7,7 @@ setup(
     version='1.0',
     description=('Software to rapidly and flexibly analyse Pulsar Timing ' +
                  'Array data via the Generalised Factorised Likelihood (GFL)' +
-                 'method')
+                 'method'),
     author='William G. Lamb',
     author_email='william.g.lamb@vanderbilt.edu',
     packages=['ceffyl', 'ceffyl.bw'],
