@@ -361,7 +361,20 @@ class GFL():
             ct = 0
             for s in signals:
                 groups.append(list(np.arange(ct, ct+s.length)))
+
+                if s.CP:  # visit GW signals x5 more often
+                    [groups.append(list(np.arange(ct, ct+s.length)))
+                     for ii in range(5)]
+
+                else:  # group individual pulsars
+                    ct2 = ct
+                    for jj in range(s.N_psrs):
+                        groups.append(list(np.arange(ct2,
+                                                     ct2+len(s.psd_priors))))
+                        ct2 += len(s.psd_priors) 
+
                 ct += s.length
+                    
 
         # sampler
         sampler = ptmcmc(ndim, logL, logp, cov, outDir=outdir, resume=resume,
