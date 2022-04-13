@@ -7,6 +7,9 @@ from os.path import exists
 """
 This file contains classes to compress chain txt files from PTMCMCSampler
 into .npy/.npz files for use in ceffyl
+
+This was a quick alternative to la_forge (https://github.com/nanograv/la_forge)
+when I didn't know la_forge existed, and will be depresicated
 """
 
 metadata = ['logL', 'unweighted_logPosterior',
