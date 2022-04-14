@@ -147,7 +147,7 @@ class compress_spsrs_chains():
     """
 
     def __init__(self, dirlist, pulsarlist,
-                 chainfile='chain_1.0.txt', pars='pars.txt'):
+                 chainfile='chain_1.0.txt', pars='pars.txt', gibbs=False):
         """
         A function to load chains and file them as a dictionary of dataframes
         """
@@ -163,8 +163,12 @@ class compress_spsrs_chains():
                 parlist = pars
 
             elif exists(psrdir+'/'+pars):
-                parlist = np.append(np.loadtxt(psrdir+'/'+pars,
-                                               dtype=np.unicode_), metadata)
+                if gibbs:  # for experimental gibbs sampler code
+                    np.loadtxt(psrdir+'/'+pars, dtype=np.unicode_)
+                else:
+                    parlist = np.append(np.loadtxt(psrdir+'/'+pars,
+                                                   dtype=np.unicode_),
+                                        metadata)
 
             else:
                 print('Parameter file not found!')
