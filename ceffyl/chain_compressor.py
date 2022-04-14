@@ -164,7 +164,7 @@ class compress_spsrs_chains():
 
             elif exists(psrdir+'/'+pars):
                 if gibbs:  # for experimental gibbs sampler code
-                    np.loadtxt(psrdir+'/'+pars, dtype=np.unicode_)
+                    parlist = np.loadtxt(psrdir+'/'+pars, dtype=np.unicode_)
                 else:
                     parlist = np.append(np.loadtxt(psrdir+'/'+pars,
                                                    dtype=np.unicode_),
