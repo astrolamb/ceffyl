@@ -15,6 +15,12 @@ def powerlaw(f, log10_A=-16, gamma=5):
             * f**(-gamma) * f[0])
 
 
+def powerlaw_10yr(f, log10_A=-16, gamma=5):
+
+    return ((10**log10_A)**2/12.0/np.pi**2 * (0.1 * const.fyr)**(gamma-3)
+            * f**(-gamma) * f[0])
+
+
 def turnover(f, log10_A=-15, gamma=13/3, lf0=-8.5, kappa=10/3, beta=0.5):
 
     hcf = (10 ** log10_A
