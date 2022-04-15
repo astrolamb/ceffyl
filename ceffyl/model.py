@@ -17,7 +17,18 @@ def powerlaw(f, log10_A=-16, gamma=5):
 
 def turnover(f, log10_A=-15, gamma=13/3, lf0=-8.5, kappa=10/3, beta=0.5):
 
-    hcf = 10**log10_A*(f/const.fyr)**((3-gamma)/2)/(1+(10**lf0/f)**kappa)**beta
+    hcf = (10 ** log10_A
+           * (f / const.fyr) ** ((3 - gamma) / 2)
+           / (1 + (10 ** lf0 / f) ** kappa) ** beta)
+    return hcf**2/12/np.pi**2/f**3 * f[0]
+
+
+def broken_turnover(f, log10_A=-15, gamma=13/3, lf0=-8.5, kappa=10/3,
+                    beta=0.5, log10_fb=-9, delta=0.1, smooth=0.1):
+    hcf = (10 ** log10_A
+           * (f / const.fyr) ** ((3 - gamma) / 2)
+           * (1+(f/10**log10_fb)**(1/smooth)) ** (smooth * (gamma - delta) / 2)
+           / (1 + (10 ** lf0 / f) ** kappa) ** beta)
     return hcf**2/12/np.pi**2/f**3 * f[0]
 
 
