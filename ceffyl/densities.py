@@ -58,7 +58,7 @@ class DE_factory:
             pulsar_names = [c.label for c in cores]  # get list of psr names
             self.pulsar_names = pulsar_names
 
-            cidx = argsort(pulsar_names)  # sort psr cores alphabetically
+            cidx = np.argsort(pulsar_names)  # sort psr cores alphabetically
             cores = cores[cidx]
             self.pulsar_names = pulsar_names[cidx]
 
