@@ -56,7 +56,7 @@ class DE_factory:
                 return
 
             # load core files
-            cores = np.array([co.Core(core) for core in corelist])
+            cores = np.array([co.Core(corepath=core) for core in corelist])
             self.cores = cores
 
             # get list of psr names
