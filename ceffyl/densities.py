@@ -49,7 +49,7 @@ class DE_factory:
         if la_forge:
             self.la_forge = True
 
-            corelist = glob.glob(coredir+'*.core')  # search for core
+            corelist = glob.glob(coredir+'/*.core')  # search for core
 
             if len(corelist) == 0:
                 print('No cores found!')
