@@ -52,10 +52,11 @@ class DE_factory:
             corelist = glob.glob(coredir+'*.core')  # search for core
 
             # load core files
-            cores = [co.Core(core) for core in corelist]
+            cores = np.array([co.Core(core) for core in corelist])
             self.cores = cores
 
-            pulsar_names = [c.label for c in cores]  # get list of psr names
+            # get list of psr names
+            pulsar_names = np.array([c.label for c in cores])
             self.pulsar_names = pulsar_names
 
             cidx = np.argsort(pulsar_names)  # sort psr cores alphabetically
