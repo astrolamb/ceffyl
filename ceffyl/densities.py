@@ -51,6 +51,10 @@ class DE_factory:
 
             corelist = glob.glob(coredir+'*.core')  # search for core
 
+            if len(corelist) == 0:
+                print('No cores found!')
+                return
+
             # load core files
             cores = np.array([co.Core(core) for core in corelist])
             self.cores = cores
