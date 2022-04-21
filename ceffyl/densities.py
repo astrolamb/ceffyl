@@ -14,7 +14,6 @@ from KDEpy import FFTKDE
 import warnings
 import os
 
-
 """
 A class to create density estimators of pulsar timing array data
 """
@@ -240,6 +239,12 @@ class DE_factory:
         @return density: array of densities
         @return kdes: array of kde objects (if chosen)
         """
+
+        # if saving densities, ensure a directory to store them before
+        # significant numerical calculations!
+        if save_density:
+            if not os.path.exists(outdir):
+                os.makedirs(outdir)
 
         # save some properties
         self.rho_grid = rho_grid
