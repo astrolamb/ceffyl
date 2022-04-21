@@ -2,7 +2,7 @@
 import numpy as np
 from enterprise.signals.parameter import Uniform, Normal, LinearExp
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
-from GFL import model
+from ceffyl import model
 import os
 
 

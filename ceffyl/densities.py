@@ -1,5 +1,5 @@
 import numpy as np
-from GFL.bw import bandwidths as bw
+from ceffyl.bw import bandwidths as bw
 import acor
 import la_forge.core as co
 import glob
