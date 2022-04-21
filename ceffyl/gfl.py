@@ -288,7 +288,7 @@ class GFL():
                                                dtype=np.unicode_, ndmin=1))
         else:
             self.pulsar_list = pulsar_list  # is list if none
-        
+
         # find index of sublist
         file_psrs = list(np.loadtxt(f'{densitydir}/pulsar_list.txt',
                                     dtype=np.unicode_,
@@ -371,10 +371,9 @@ class GFL():
                     for jj in range(s.N_psrs):
                         groups.append(list(np.arange(ct2,
                                                      ct2+len(s.psd_priors))))
-                        ct2 += len(s.psd_priors) 
+                        ct2 += len(s.psd_priors)
 
                 ct += s.length
-                    
 
         # sampler
         sampler = ptmcmc(ndim, logL, logp, cov, outDir=outdir, resume=resume,
