@@ -26,14 +26,17 @@ class DE_factory:
     chains from a 'free spectrum' analysis from enterprise-pulsar
     (https://github.com/nanograv/enterprise/)
     """
-    def __init__(self, coredir, pulsar_names=[], la_forge=True,
-                 rho_label=None, compressed_file=None, Tspan=None, N_freqs=30):
+    def __init__(self, coredir, pulsar_names=[], glob_recursive=True,
+                 la_forge=True, rho_label=None, compressed_file=None,
+                 Tspan=None, N_freqs=30):
         """
         Open the compressed chain files and create density estimators
 
         @param coredir: directory of core objects for the GFL
                         ASSUMPTIONS - all cores have the same frequencies
-
+        @param pulsar_names: list of pulsar names
+        @param glob_recursive: use recursion when looking for cores. Default:
+                               True; set False for PTA freespec
         @param la_forge: use core objects from la_forge. Default: True. If
                          false, please supply a .npy/.npz file
 
@@ -45,10 +48,14 @@ class DE_factory:
         @param N_freqs: number of frequencies of free spectrum analysis
         """
 
+        self.la_forge = la_forge
         if la_forge:
-            self.la_forge = True
 
-            corelist = glob.glob(coredir+'/*.core')  # search for core
+            if glob_recursive:  # search for cores
+                corelist = glob.glob(coredir+'/psr_**/*.core',
+                                     recursive=glob_recursive)
+            else:
+                corelist = glob.glob(coredir+'/*.core')
 
             if len(corelist) == 0:
                 print('No cores found!')
@@ -69,7 +76,7 @@ class DE_factory:
 
             # save list of rho labels from first core
             self.rho_labels = [p for p in cores[0].params if 'rho' in p]
-            self.freqs = cores[0].rn_freqs  # save list of freqs from first core
+            self.freqs = cores[0].rn_freqs  # save list of freqs from 1st core
             self.N_freqs = len(self.freqs)
 
         else:
