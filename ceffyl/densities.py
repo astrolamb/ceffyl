@@ -68,9 +68,9 @@ class DE_factory:
             # get list of psr names
             self.pulsar_names = pulsar_names
 
-            cidx = np.argsort(pulsar_names)  # sort psr cores alphabetically
-            cores = cores[cidx]
-            self.pulsar_names = pulsar_names[cidx]
+            #cidx = np.argsort(pulsar_names)  # sort psr cores alphabetically
+            #cores = cores[cidx]
+            #self.pulsar_names = pulsar_names[cidx]
             self.N_psrs = len(pulsar_names)
 
             # save list of rho labels from first core
