@@ -15,6 +15,7 @@ to fit spectra to a density estimation of pulsar timing array data
 ( 00 )
 """
 
+
 class signal():
     """
     A class to add signals to the GFL

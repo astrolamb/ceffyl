@@ -267,7 +267,7 @@ class DE_factory:
                     # calculate bandwidth
                     if isinstance(bandwidth, np.ndarray):
                         bw = bandwidth[ct]
-                    if not isinstance(bandwidth, (str, int, float)):
+                    elif not isinstance(bandwidth, (str, int, float)):
                         bw = self.bandwidth(data, bw_func=bandwidth,
                                             thin_chain=bw_thin_chain,
                                             **bw_kwargs)
