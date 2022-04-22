@@ -259,14 +259,14 @@ class DE_factory:
 
         if self.la_forge:
             # calculating densities for each freq for each psr
-            pdfs, bws, ct = [], [], 0
-            for c in self.cores:
-                for rho in self.rho_labels:
+            pdfs, bws = [], []
+            for ii, c in enumerate(self.cores):
+                for jj, rho in enumerate(self.rho_labels):
                     data = c(rho)  # data to represent
 
                     # calculate bandwidth
                     if isinstance(bandwidth, np.ndarray):
-                        bw = bandwidth[ct]
+                        bw = bandwidth[ii][jj]
                     elif not isinstance(bandwidth, (str, int, float)):
                         bw = self.bandwidth(data, bw_func=bandwidth,
                                             thin_chain=bw_thin_chain,
@@ -281,7 +281,6 @@ class DE_factory:
                                              kde_func=kde_func,
                                              thin_chain=kde_thin_chain,
                                              **kde_kwargs))
-                    ct += 1
 
         else:  # TO BE DEPRECIATED
             # calculating densities for each freq for each psr
