@@ -66,7 +66,6 @@ class DE_factory:
             self.cores = cores
 
             # get list of psr names
-            pulsar_names = np.array([c.label for c in cores])
             self.pulsar_names = pulsar_names
 
             cidx = np.argsort(pulsar_names)  # sort psr cores alphabetically
@@ -261,6 +260,7 @@ class DE_factory:
             # calculating densities for each freq for each psr
             pdfs, bws = [], []
             for ii, c in enumerate(self.cores):
+                print(f'Computing densities for psr {ii}')
                 for jj, rho in enumerate(self.rho_labels):
                     data = c(rho)  # data to represent
 
