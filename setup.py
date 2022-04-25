@@ -4,7 +4,7 @@ import numpy
 
 setup(
     name='ceffyl',
-    version='1.1',
+    version='1.2',
     description=('Software to rapidly and flexibly analyse Pulsar Timing ' +
                  'Array data via the Generalised Factorised Likelihood (GFL)' +
                  'method'),
