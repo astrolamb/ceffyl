@@ -162,6 +162,7 @@ class JumpProposal(object):
         self.param_names = []  # list of parameter names
         self.red_names = []  # list of irn parameter names
         self.gw_names = []  # list of common process parameter names
+        self.empirical_distr = empirical_distr  # emp dists
 
         # loop through signals and save info
         for s in signals:
