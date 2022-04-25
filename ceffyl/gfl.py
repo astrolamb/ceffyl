@@ -150,7 +150,7 @@ class JumpProposal(object):
     PTMCMCSampler (https://github.com/jellis18/PTMCMCSampler/)
     """
     def __init__(self, signals, empirical_distr=None, save_ext_dists=False,
-                 outdir='chains', pulsar_list=[]):
+                 outdir='chains'):
         """
         Set up some custom jump proposals
 
@@ -506,59 +506,6 @@ class JumpProposal(object):
 
         return q, float(lqxy)
 
-    def draw_from_psr_empirical_distr(self, x, iter, beta):
-        """
-        Prior draw from empirical distributions for random pulsar
-
-        @param x: array of proposed parameter values
-        @param iter: iteration of sampler
-        @param beta: inverse temperature of chain
-
-        @return: q: New position in parameter space
-        @return: lqxy: log forward-backward jump probability
-        """
-        q = x.copy()
-        lqxy = 0
-
-        if self.empirical_distr is not None:
-
-            # make list of empirical distributions with psr name
-            psr = np.random.choice(self.pulsar_list)
-            pnames = [ed.param_name if ed.ndim == 1 else ed.param_names
-                      for ed in self.empirical_distr]
-
-            # Retrieve indices of emp dists with pulsar pars.
-            idxs = []
-            for par in pnames:
-                if isinstance(par, str):
-                    if psr in par:
-                        idxs.append(pnames.index(par))
-                elif isinstance(par, list):
-                    if any([psr in p for p in par]):
-                        idxs.append(pnames.index(par))
-
-            for idx in idxs:
-                if self.empirical_distr[idx].ndim == 1:
-                    pidx = self.pimap[self.empirical_distr[idx].param_name]
-                    q[pidx] = self.empirical_distr[idx].draw()
-
-                    lqxy += (self.empirical_distr[idx].logprob(x[pidx]) -
-                             self.empirical_distr[idx].logprob(q[pidx]))
-
-                else:
-                    oldsample = [x[pnames.index(p)] for p in
-                                 self.empirical_distr[idx].param_names]
-                    newsample = self.empirical_distr[idx].draw()
-
-                    for p, n in zip(self.empirical_distr[idx].param_names,
-                                    newsample):
-                        q[pnames.index(p)] = n
-
-                    lqxy += (self.empirical_distr[idx].logprob(oldsample) -
-                             self.empirical_distr[idx].logprob(newsample))
-
-        return q, float(lqxy)
-
 
 class GFL():
     """
@@ -700,8 +647,7 @@ class GFL():
         # PT swap jump proposals
         if jump:
             jp = JumpProposal(signals, empirical_distr=empirical_distr,
-                              save_ext_dists=save_ext_dists, outdir=outdir,
-                              pulsar_list=self.pulsar_list)
+                              save_ext_dists=save_ext_dists, outdir=outdir)
             sampler.jp = jp
 
             # always add draw from prior
@@ -730,8 +676,6 @@ class GFL():
             if empirical_distr is not None:
                 print('Attempting to add empirical proposals...\n')
                 sampler.addProposalToCycle(jp.draw_from_empirical_distr, 10)
-                sampler.addProposalToCycle(jp.draw_from_psr_empirical_distr,
-                                           10)
 
         return sampler
 
