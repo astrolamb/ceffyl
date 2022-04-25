@@ -603,7 +603,7 @@ class GFL():
                                     dtype=np.unicode_,
                                     ndmin=1))
         selected_psrs = [file_psrs.index(p) for p in self.pulsar_list]
-        self.pulsar_list = self.pulsar_list[selected_psrs]
+        self.pulsar_list = list(np.array(self.pulsar_list)[selected_psrs])
         self.N_psrs = len(self.pulsar_list)
 
         # load densities from npy binary file for given psrs, freqs
