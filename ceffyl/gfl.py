@@ -150,7 +150,7 @@ class JumpProposal(object):
     PTMCMCSampler (https://github.com/jellis18/PTMCMCSampler/)
     """
     def __init__(self, signals, empirical_distr=None, save_ext_dists=False,
-                 outdir='chains'):
+                 outdir='chains', pulsar_list=[]):
         """
         Set up some custom jump proposals
 
@@ -163,6 +163,7 @@ class JumpProposal(object):
         self.red_names = []  # list of irn parameter names
         self.gw_names = []  # list of common process parameter names
         self.empirical_distr = empirical_distr  # emp dists
+        self.pulsar_list = pulsar_list  # list of pulsars
 
         # loop through signals and save info
         for s in signals:
