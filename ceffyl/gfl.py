@@ -174,6 +174,11 @@ class JumpProposal(object):
             else:  # else, save different list for comparison purposes
                 self.red_names.extend(s.param_names)
 
+        # parameter indices map
+        self.pimap = {}
+        for ct, p in enumerate(self.param_names):
+            self.pimap[p] = ct
+
         if self.empirical_distr is not None:
             # only save the empirical distributions for
             # parameters that are in the model
@@ -467,7 +472,7 @@ class JumpProposal(object):
 
             if self.empirical_distr[distr_idx].ndim == 1:
 
-                idx = self.pnames.index(
+                idx = self.param_names.index(
                         self.empirical_distr[distr_idx].param_name)
                 q[idx] = self.empirical_distr[distr_idx].draw()
 
@@ -482,13 +487,14 @@ class JumpProposal(object):
 
             else:
                 dist = self.empirical_distr[distr_idx]
-                oldsample = [x[self.pnames.index(p)] for p in dist.param_names]
+                oldsample = [x[self.param_names.index(p)]
+                             for p in dist.param_names]
                 newsample = dist.draw()
 
                 lqxy = (dist.logprob(oldsample) - dist.logprob(newsample))
 
                 for p, n in zip(dist.param_names, newsample):
-                    q[self.pnames.index(p)] = n
+                    q[self.param_names.index(p)] = n
 
                 # if we fall outside the emp distr support
                 # pull from prior instead
@@ -516,7 +522,7 @@ class JumpProposal(object):
         if self.empirical_distr is not None:
 
             # make list of empirical distributions with psr name
-            psr = np.random.choice(self.psrnames)
+            psr = np.random.choice(self.pulsar_list)
             pnames = [ed.param_name if ed.ndim == 1 else ed.param_names
                       for ed in self.empirical_distr]
 
@@ -590,13 +596,14 @@ class GFL():
             self.pulsar_list = list(np.loadtxt(f'{densitydir}/pulsar_list.txt',
                                                dtype=np.unicode_, ndmin=1))
         else:
-            self.pulsar_list = pulsar_list  # is list if none
+            self.pulsar_list = pulsar_list
 
         # find index of sublist
         file_psrs = list(np.loadtxt(f'{densitydir}/pulsar_list.txt',
                                     dtype=np.unicode_,
                                     ndmin=1))
         selected_psrs = [file_psrs.index(p) for p in self.pulsar_list]
+        self.pulsar_list = self.pulsar_list[selected_psrs]
         self.N_psrs = len(self.pulsar_list)
 
         # load densities from npy binary file for given psrs, freqs
@@ -692,7 +699,8 @@ class GFL():
         # PT swap jump proposals
         if jump:
             jp = JumpProposal(signals, empirical_distr=empirical_distr,
-                              save_ext_dists=save_ext_dists, outdir=outdir)
+                              save_ext_dists=save_ext_dists, outdir=outdir,
+                              pulsar_list=self.pulsar_list)
             sampler.jp = jp
 
             # always add draw from prior
