@@ -67,10 +67,6 @@ class DE_factory:
 
             # get list of psr names
             self.pulsar_names = pulsar_names
-
-            #cidx = np.argsort(pulsar_names)  # sort psr cores alphabetically
-            #cores = cores[cidx]
-            #self.pulsar_names = pulsar_names[cidx]
             self.N_psrs = len(pulsar_names)
 
             # save list of rho labels from first core
@@ -403,7 +399,6 @@ class DE_factory:
         # calculating densities for each freq for each psr
         density, binedges, ct = [], [], 0
         for psr in self.pulsar_names:
-
             print(f'Creating density array for psr {ct}')
             for rho in self.rho_labels:
 
