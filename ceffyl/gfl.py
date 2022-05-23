@@ -76,7 +76,7 @@ class signal():
 
             param_names = []
             for p in params:
-                if p.size == 0:
+                if p.size is None:
                     param_names.append(f'{p.name}_{name}')
                 else:
                     param_names.extend([f'{p.name}_{ii}_{name}'
@@ -103,7 +103,7 @@ class signal():
             self.selected_psrs = selected_psrs
             self.N_psrs = len(selected_psrs)
 
-            if p.size != 0:
+            if p.size is not None:
                 print('single pulsars with varying parameters for each ' + 
                       'frequency is not yet supported')
                 return
