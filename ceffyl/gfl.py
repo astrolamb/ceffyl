@@ -73,11 +73,28 @@ class signal():
         if common_process:
             self.CP = True
             self.selected_psrs = []
-            self.param_names = [f'{p.name}_{name}' for p in params]
+
+            param_names = []
+            for p in params:
+                if p.size == 0:
+                    param_names.append(f'{p.name}_{name}')
+                else:
+                    param_names.extend([f'{p.name}_{ii}_{name}'
+                                        for ii in range(p.size)])
+            self.param_names = param_names
+            self.N_params = len(param_names)
             self.params = params
             # tuple to reshape xs for vectorised computation
             self.reshape = (1, 1, len(params))
             self.length = len(params)
+
+            # mapping location of params
+            ct = 0
+            pmap = []
+            for p in params:
+                pmap.append(list(np.arange(ct, ct+p.size)))
+                ct += p.size
+            self.pmap = pmap
 
         # else save this information if signal is not common
         # it essentially multiplies lists across psrs for easy mapping
@@ -85,13 +102,28 @@ class signal():
             self.CP = False
             self.selected_psrs = selected_psrs
             self.N_psrs = len(selected_psrs)
+
+            if p.size != 0:
+                print('single pulsars with varying parameters for each ' + 
+                      'frequency is not yet supported')
+                return
+
             self.param_names = [f'{q}_{name}_{p.name}' for q in
                                 selected_psrs for p in params]
+            self.N_params = len(self.param_names)
             self.params = params*self.N_psrs
             # tuple to reshape xs for vectorised computation
             self.reshape = (1, len(selected_psrs),
                             len(params))
             self.length = len(self.params)
+
+            # mapping location of params
+            ct = 0
+            pmap = []
+            for p in self.psd_priors:  # doesn't work yet for p.size!=1
+                pmap.append(list(np.arange(ct, self.N_params, self.N_psrs)))
+                ct += p.size
+            self.pmap = pmap
 
     def get_logpdf(self, xs):
         """
@@ -131,7 +163,7 @@ class signal():
 
         @return samples: array of samples from each parameter
         """
-        return np.array([p.sample() for p in self.params])
+        return np.hstack([p.sample() for p in self.params])
 
 
 class JumpProposal(object):
@@ -698,16 +730,16 @@ class GFL():
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             x = xs[ct:ct+s.length]
-            mapped_x = [np.vstack(x[ii::len(s.psd_priors)])
-                        for ii in range(len(s.psd_priors))]
+            mapped_x = [x[p] for p in s.pmap]
             logpdf += s.get_logpdf(mapped_x)
             ct += s.length
 
         return logpdf
 
     # in dev
+    """
     def prior_transform(self, u):
-        """
+        
         prior function for using in nested samplers, in particular dynesty
         https://dynesty.readthedocs.io/
 
@@ -716,7 +748,7 @@ class GFL():
 
         @param u: N-dimensional unit cube
         @return ppf: array of percent point functions (ppf) of each parameter
-        """
+        
 
         ct = 0  # parameter counter
         ppf = np.ones_like(u)  # total logpdf
@@ -729,6 +761,7 @@ class GFL():
             ct += s.length
 
         return ppf
+    """
 
     def ln_likelihood(self, xs):
         """
@@ -744,8 +777,7 @@ class GFL():
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             x = xs[ct:ct+s.length]
-            mapped_x = {s_i.name: np.vstack(x[ii::len(s.psd_priors)])
-                        for ii, s_i in enumerate(s.psd_priors)}
+            mapped_x = {s_i.name: x[p] for p, s_i in zip(s.pmap, s.psd_priors)}
             rho[s.psr_idx, :s.N_freqs] += s.get_rho(self.freqs[:s.N_freqs],
                                                     mapped_x)
             ct += s.length
