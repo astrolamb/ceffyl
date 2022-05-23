@@ -698,7 +698,7 @@ class GFL():
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             x = xs[ct:ct+s.length]
-            mapped_x = np.array([x[ii::len(s.psd_priors)]
+            mapped_x = np.array([np.vstack(x[ii::len(s.psd_priors)])
                                 for ii in range(len(s.psd_priors))])
             logpdf += s.get_logpdf(mapped_x)
             ct += s.length
@@ -777,7 +777,7 @@ class GFL():
             x = xs[ct:ct+s.length]
             mapped_x = {s_i.name: x[ii::len(s.psd_priors)]
                         for ii, s_i in enumerate(s.psd_priors)}
-            rho[s.psr_idx][:s.N_freqs] += s.get_rho(self.freqs[:s.N_freqs],
+            rho[s.psr_idx, :s.N_freqs] += s.get_rho(self.freqs[:s.N_freqs],
                                                     mapped_x)
             ct += s.length
 
