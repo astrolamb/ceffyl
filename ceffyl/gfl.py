@@ -103,8 +103,8 @@ class signal():
 
         @return logpdf: summed logpdf of proposed parameter
         """
-        return np.array([p.get_logpdf(x)
-                         for p, x in zip(self.psd_priors, xs)]).sum()
+        return np.array([p.get_logpdf(x)  # require 2 x sum of list of arrays
+                         for p, x in zip(self.psd_priors, xs)]).sum().sum()
 
     def get_rho(self, freqs, mapped_xs):
         """
@@ -121,8 +121,7 @@ class signal():
         @return rho: array of PSDs
         """
         rho = self.psd(freqs, **mapped_xs, **self.const_params,
-                       **self.psd_kwargs).T
-        rho[:, self.N_freqs:] = 0  # freqs beyond N_freqs kept zero
+                       **self.psd_kwargs)
 
         return rho
 
@@ -132,7 +131,7 @@ class signal():
 
         @return samples: array of samples from each parameter
         """
-        return np.hstack([p.sample() for p in self.params])
+        return np.array([p.sample() for p in self.params])
 
 
 class JumpProposal(object):
@@ -706,6 +705,7 @@ class GFL():
 
         return logpdf
 
+    # in dev
     def prior_transform(self, u):
         """
         prior function for using in nested samplers, in particular dynesty
@@ -744,9 +744,10 @@ class GFL():
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             x = xs[ct:ct+s.length]
-            mapped_x = {s_i.name: x[ii::len(s.psd_priors)]
+            mapped_x = {s_i.name: np.vstack(x[ii::len(s.psd_priors)])
                         for ii, s_i in enumerate(s.psd_priors)}
-            rho[s.psr_idx] += s.get_rho(self.reshaped_freqs, mapped_x)
+            rho[s.psr_idx][:s.N_freqs] += s.get_rho(self.freqs[:s.N_freqs],
+                                                    mapped_x)
             ct += s.length
 
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
@@ -776,7 +777,8 @@ class GFL():
             x = xs[ct:ct+s.length]
             mapped_x = {s_i.name: x[ii::len(s.psd_priors)]
                         for ii, s_i in enumerate(s.psd_priors)}
-            rho[s.psr_idx] += s.get_rho(self.reshaped_freqs, mapped_x)
+            rho[s.psr_idx][:s.N_freqs] += s.get_rho(self.freqs[:s.N_freqs],
+                                                    mapped_x)
             ct += s.length
 
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
