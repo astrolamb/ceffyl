@@ -77,8 +77,10 @@ class signal():
             param_names = []
             for p in params:
                 if p.size is None:
+                    size = 1
                     param_names.append(f'{p.name}_{name}')
                 else:
+                    size = p.size
                     param_names.extend([f'{p.name}_{ii}_{name}'
                                         for ii in range(p.size)])
             self.param_names = param_names
@@ -92,8 +94,8 @@ class signal():
             ct = 0
             pmap = []
             for p in params:
-                pmap.append(list(np.arange(ct, ct+p.size)))
-                ct += p.size
+                pmap.append(list(np.arange(ct, ct+size)))
+                ct += size
             self.pmap = pmap
 
         # else save this information if signal is not common
@@ -107,6 +109,8 @@ class signal():
                 print('single pulsars with varying parameters for each ' + 
                       'frequency is not yet supported')
                 return
+            else:
+                size = 1
 
             self.param_names = [f'{q}_{name}_{p.name}' for q in
                                 selected_psrs for p in params]
@@ -122,7 +126,7 @@ class signal():
             pmap = []
             for p in self.psd_priors:  # doesn't work yet for p.size!=1
                 pmap.append(list(np.arange(ct, self.N_params, self.N_psrs)))
-                ct += p.size
+                ct += size
             self.pmap = pmap
 
     def get_logpdf(self, xs):
