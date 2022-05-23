@@ -91,11 +91,11 @@ class signal():
             self.length = len(params)
 
             # mapping location of params
-            ct = 0
+            id = 0
             pmap = []
             for p in params:
-                pmap.append(list(np.arange(ct, ct+size)))
-                ct += size
+                pmap.append(list(np.arange(id, id+size)))
+                id += size
             self.pmap = pmap
 
         # else save this information if signal is not common
@@ -122,11 +122,11 @@ class signal():
             self.length = len(self.params)
 
             # mapping location of params
-            ct = 0
+            id = 0
             pmap = []
             for p in self.psd_priors:  # doesn't work yet for p.size!=1
-                pmap.append(list(np.arange(ct, self.N_params, self.N_psrs)))
-                ct += size
+                pmap.append(list(np.arange(id, self.N_params, self.N_psrs)))
+                id += size
             self.pmap = pmap
 
     def get_logpdf(self, xs):
@@ -733,8 +733,7 @@ class GFL():
         logpdf = 0  # total logpdf
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            x = xs[ct:ct+s.length]
-            mapped_x = [x[p] for p in s.pmap]
+            mapped_x = [xs[p] for p in s.pmap]
             logpdf += s.get_logpdf(mapped_x)
             ct += s.length
 
@@ -780,8 +779,8 @@ class GFL():
         rho = np.zeros((self.N_psrs, self.N_freqs))  # initalise empty array
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            x = xs[ct:ct+s.length]
-            mapped_x = {s_i.name: x[p] for p, s_i in zip(s.pmap, s.psd_priors)}
+            mapped_x = {s_i.name: xs[p] for p, s_i in zip(s.pmap,
+                                                          s.psd_priors)}
             rho[s.psr_idx, :s.N_freqs] += s.get_rho(self.freqs[:s.N_freqs],
                                                     mapped_x)
             ct += s.length
