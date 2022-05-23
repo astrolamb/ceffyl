@@ -132,7 +132,7 @@ class signal():
 
         @return samples: array of samples from each parameter
         """
-        return np.array([p.sample() for p in self.params])
+        return np.hstack([p.sample() for p in self.params])
 
 
 class JumpProposal(object):
@@ -705,6 +705,30 @@ class GFL():
             ct += s.length
 
         return logpdf
+
+    def prior_transform(self, u):
+        """
+        prior function for using in nested samplers, in particular dynesty
+        https://dynesty.readthedocs.io/
+
+        it transforms the N-dimensional unit cube u to our prior range of
+        interest
+
+        @param u: N-dimensional unit cube
+        @return ppf: array of percent point functions (ppf) of each parameter
+        """
+
+        ct = 0  # parameter counter
+        ppf = np.ones_like(u)  # total logpdf
+        for s in self.signals:  # iterate through signals
+            # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
+            x = u[ct:ct+s.length]
+            mapped_x = np.array([x[ii::len(s.psd_priors)]
+                                for ii in range(len(s.psd_priors))])
+            logpdf += s.get_logpdf(mapped_x)
+            ct += s.length
+
+        return ppf
 
     def ln_likelihood(self, xs):
         """
