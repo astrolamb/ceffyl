@@ -1,6 +1,6 @@
 # imports
 import numpy as np
-from enterprise.signals.parameter import Uniform, Normal, LinearExp
+from enterprise.signals.parameter import Uniform
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
 from ceffyl import model
 import os
@@ -15,10 +15,6 @@ from enterprise_extensions.empirical_distr import (EmpiricalDistribution1D,
 """
 Classes to create noise signals and a parallel tempered PTMCMCSampler object
 to fit spectra to a density estimation of pulsar timing array data
-
-(\__/)
-| oo |
-( 00 )
 """
 
 
@@ -291,12 +287,13 @@ class JumpProposal(object):
                 elif isinstance(emp_dist, EmpiricalDistribution2DKDE):
                     # new distribution with more bins this time to extend it
                     # all the way out in same style as above.
+                    bandwidth = emp_dist.bandwidth
                     new_emp = EmpiricalDistribution2DKDE(emp_dist.param_names,
                                                          samples.T,
                                                          minvals=minvals,
                                                          maxvals=maxvals,
                                                          nbins=nbins+40,
-                                                         bandwidth=emp_dist.bandwidth)
+                                                         bandwidth=bandwidth)
                 new_emp_dists.append(new_emp)
 
             elif (isinstance(emp_dist, EmpiricalDistribution1D) or
@@ -348,11 +345,12 @@ class JumpProposal(object):
                     new_emp = EmpiricalDistribution1D(emp_dist.param_name,
                                                       samples, new_bins)
                 elif isinstance(emp_dist, EmpiricalDistribution1DKDE):
+                    bandwidth = emp_dist.bandwidth
                     new_emp = EmpiricalDistribution1DKDE(emp_dist.param_name,
                                                          samples,
                                                          minval=prior_min,
                                                          maxval=prior_max,
-                                                         bandwidth=emp_dist.bandwidth)
+                                                         bandwidth=bandwidth)
                 new_emp_dists.append(new_emp)
 
             else:

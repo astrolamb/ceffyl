@@ -6,6 +6,7 @@ Some code to calculate the hellinger distance of a 2D distributions, with
 more options to come soon!
 """
 
+
 def hellinger(gamma_chain1, log10A_chain1, gamma_chain2, log10A_chain2, Nbins):
     """
     A function to calculate hellinger distance for two analyses with log10_A
