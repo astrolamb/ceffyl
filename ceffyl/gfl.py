@@ -75,28 +75,25 @@ class signal():
             self.selected_psrs = []
 
             param_names = []
+            id, pmap = 0, []
             for p in params:
-                if p.size is None:
-                    size = 1
+                if p.size is None or p.size == 1:
                     param_names.append(f'{p.name}_{name}')
+                    pmap.append(list(np.arange(id, id+1)))
+                    id += 1
                 else:
-                    size = p.size
                     param_names.extend([f'{p.name}_{ii}_{name}'
                                         for ii in range(p.size)])
+                    
+                    pmap.append(list(np.arange(id, id+p.size)))
+                    id += p.size
+            self.pmap = pmap
             self.param_names = param_names
             self.N_params = len(param_names)
             self.params = params
             # tuple to reshape xs for vectorised computation
             self.reshape = (1, 1, len(params))
             self.length = len(params)
-
-            # mapping location of params
-            id = 0
-            pmap = []
-            for p in params:
-                pmap.append(list(np.arange(id, id+size)))
-                id += size
-            self.pmap = pmap
 
         # else save this information if signal is not common
         # it essentially multiplies lists across psrs for easy mapping
@@ -125,7 +122,7 @@ class signal():
             id = 0
             pmap = []
             for p in self.psd_priors:  # doesn't work yet for p.size!=1
-                pmap.append(list(np.arange(id, self.N_params, self.N_psrs)))
+                pmap.append(list(np.arange(id, self.N_psrs, self.N_params)))
                 id += size
             self.pmap = pmap
 
