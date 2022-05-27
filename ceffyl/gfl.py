@@ -65,6 +65,7 @@ class signal():
         self.N_freqs = N_freqs
         self.psd = psd
         self.psd_priors = params
+        self.N_priors = len(params)
         self.const_params = const_params
         self.psd_kwargs = psd_kwargs
         self.psr_idx = []  # to be save later in GFL class
@@ -102,12 +103,13 @@ class signal():
             self.selected_psrs = selected_psrs
             self.N_psrs = len(selected_psrs)
 
-            if p.size is not None:
-                print('single pulsars with varying parameters for each ' +
-                      'frequency is not yet supported')
-                return
-            else:
-                size = 1
+            for p in params:
+                if p.size is not None:
+                    print('single pulsars with varying parameters for each ' +
+                          'frequency is not yet supported')
+                    return
+                else:
+                    size = 1
 
             self.param_names = [f'{q}_{name}_{p.name}' for q in
                                 selected_psrs for p in params]
@@ -122,7 +124,7 @@ class signal():
             id = 0
             pmap = []
             for p in self.psd_priors:  # doesn't work yet for p.size!=1
-                pmap.append(list(np.arange(id, self.N_psrs, self.N_params)))
+                pmap.append(list(np.arange(id, self.N_params, self.N_priors)))
                 id += size
             self.pmap = pmap
 
