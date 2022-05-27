@@ -643,7 +643,7 @@ class GFL():
                 s.pmap = pmap
             else:
                 id_irn = id
-                for ii in len(s.psd_priors):
+                for ii in range(len(s.psd_priors)):
                     pmap.append(list(np.arange(id_irn+ii, id+s.N_params,
                                                s.N_priors)))
                 id += s.N_params
