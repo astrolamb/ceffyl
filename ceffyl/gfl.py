@@ -153,10 +153,10 @@ class signal():
         @param mapped_xs: mapped dictionary of proposed values corresponding to
                           signal params
 
-        @return rho: array of PSDs
+        @return rho: array of PSDs in shape (N_p x N_f)
         """
         rho = self.psd(freqs, **mapped_xs, **self.const_params,
-                       **self.psd_kwargs)
+                       **self.psd_kwargs).T
 
         return rho
 
@@ -779,8 +779,9 @@ class GFL():
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_x = {s_i.name: xs[p] for p, s_i in zip(s.pmap,
                                                           s.psd_priors)}
-            rho[s.psr_idx, :s.N_freqs] += s.get_rho(self.freqs[:s.N_freqs],
-                                                    mapped_x)
+            rho[s.psr_idx,
+                :s.N_freqs] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
+                                         mapped_x)
             ct += s.length
 
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
