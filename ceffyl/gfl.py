@@ -84,7 +84,7 @@ class signal():
                 else:
                     param_names.extend([f'{p.name}_{ii}_{name}'
                                         for ii in range(p.size)])
-                    
+
                     pmap.append(list(np.arange(id, id+p.size)))
                     id += p.size
             self.pmap = pmap
@@ -103,7 +103,7 @@ class signal():
             self.N_psrs = len(selected_psrs)
 
             if p.size is not None:
-                print('single pulsars with varying parameters for each ' + 
+                print('single pulsars with varying parameters for each ' +
                       'frequency is not yet supported')
                 return
             else:
@@ -739,7 +739,7 @@ class GFL():
     # in dev
     """
     def prior_transform(self, u):
-        
+
         prior function for using in nested samplers, in particular dynesty
         https://dynesty.readthedocs.io/
 
@@ -748,7 +748,6 @@ class GFL():
 
         @param u: N-dimensional unit cube
         @return ppf: array of percent point functions (ppf) of each parameter
-        
 
         ct = 0  # parameter counter
         ppf = np.ones_like(u)  # total logpdf

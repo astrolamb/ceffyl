@@ -54,8 +54,7 @@ def t_process_adapt(f, log10_A=-15, gamma=4.33, alphas_adapt=None,
             alpha_model = alphas_adapt
         else:
             alpha_model = np.ones_like(f)
-            alpha_model[2 * int(np.rint(nfreq))] = alphas_adapt
-            alpha_model[2 * int(np.rint(nfreq)) + 1] = alphas_adapt
+            alpha_model[int(np.rint(nfreq))] = alphas_adapt
 
     return powerlaw(f, log10_A=log10_A, gamma=gamma) * alpha_model
 
