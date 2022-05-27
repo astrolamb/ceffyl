@@ -642,7 +642,10 @@ class GFL():
                         id += p.size
                 s.pmap = pmap
             else:
-                pmap.append(list(np.arange(id, id+s.N_params, s.N_priors)))
+                id_irn = id
+                for ii in len(s.psd_priors):
+                    pmap.append(list(np.arange(id_irn+ii, id+s.N_params,
+                                               s.N_priors)))
                 id += s.N_params
                 s.pmap = pmap
         # self.pmap = pmap
