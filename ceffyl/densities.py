@@ -1,3 +1,7 @@
+"""
+A class to create density estimators of pulsar timing array data
+"""
+
 import numpy as np
 from ceffyl.bw import bandwidths as bw
 import acor
@@ -13,10 +17,19 @@ except ImportError:
 from KDEpy import FFTKDE
 import warnings
 import os
+import re
 
-"""
-A class to create density estimators of pulsar timing array data
-"""
+
+def numericalSort(value):
+    """
+    ceffyl.densities uses glob and requires that strings are sorted numerically
+    i.e. we want ['psr_0', 'psr_1', 'psr_2', 'psr_3', ...]
+    not ['psr_0', 'psr_1', 'psr_10', 'psr_11', ...]
+    """
+    numbers = re.compile(r'(\d+)')
+    parts = numbers.split(value)
+    parts[1::2] = map(int, parts[1::2])
+    return parts
 
 
 class DE_factory:
@@ -26,73 +39,40 @@ class DE_factory:
     chains from a 'free spectrum' analysis from enterprise-pulsar
     (https://github.com/nanograv/enterprise/)
     """
-    def __init__(self, coredir, pulsar_names=[], glob_recursive=True,
-                 la_forge=True, rho_label=None, compressed_file=None,
-                 Tspan=None, N_freqs=30):
+    def __init__(self, coredir, pulsar_names=[], single_pulsars=True,
+                 rho_label=None, compressed_file=None, Tspan=None, N_freqs=30):
         """
         Open the compressed chain files and create density estimators
 
         @param coredir: directory of core objects for the GFL
                         ASSUMPTIONS - all cores have the same frequencies
         @param pulsar_names: list of pulsar names
-        @param glob_recursive: use recursion when looking for cores. Default:
-                               True; set False for PTA freespec
-        @param la_forge: use core objects from la_forge. Default: True. If
-                         false, please supply a .npy/.npz file
-
-        The following parameters will be depreciated
-        @params compressed_file: location of numpy compressed file containing
-                                  MCMC chains
-        @param rho_label: root of labels for PSDs at each frequency
-        @param Tspan: time span of the dataset
-        @param N_freqs: number of frequencies of free spectrum analysis
+        @param single_pulsars: directory of directories when looking for cores.
+                               Default: True; set False for PTA freespec
         """
 
-        self.la_forge = la_forge
-        if la_forge:
-
-            if glob_recursive:  # search for cores
-                corelist = glob.glob(coredir+'/psr_**/*.core',
-                                     recursive=glob_recursive)
-            else:
-                corelist = glob.glob(coredir+'/*.core')
-
-            if len(corelist) == 0:
-                print('No cores found!')
-                return
-
-            # load core files
-            cores = np.array([co.Core(corepath=core) for core in corelist])
-            self.cores = cores
-
-            # get list of psr names
-            self.pulsar_names = pulsar_names
-            self.N_psrs = len(pulsar_names)
-
-            # save list of rho labels from first core
-            self.rho_labels = [p for p in cores[0].params if 'rho' in p]
-            self.freqs = cores[0].rn_freqs  # save list of freqs from 1st core
-            self.N_freqs = len(self.freqs)
-
+        if single_pulsars:  # search for cores
+            corelist = sorted(glob.glob(coredir+'/psr_**/*.core'),
+                              key=numericalSort)
         else:
-            self.la_forge = False
-            self.chains = np.load(compressed_file)  # load compressed chains
+            corelist = sorted(glob.glob(coredir+'/*.core'), key=numericalSort)
 
-            # not required for calculating densities, but is important metadata
-            self.freqs = np.arange(1, N_freqs+1)/Tspan
+        if len(corelist) == 0:
+            print('No cores found!')
+            return
 
-            self.N_freqs = N_freqs  # save information for later
-            self.rho_labels = [rho_label+str(ii) for ii in range(N_freqs)]
+        # load core files
+        cores = np.array([co.Core(corepath=core) for core in corelist])
+        self.cores = cores
 
-            # save pulsar names from chain file
-            if hasattr(self.chains, 'keys'):
-                pulsar_names = list(self.chains.keys())
-            else:  # if single chain from npy file, save as a single key
-                pulsar_names = ['freespec']
-                self.chains = dict(freespec=self.chains)
+        # get list of psr names
+        self.pulsar_names = pulsar_names
+        self.N_psrs = len(pulsar_names)
 
-            self.pulsar_names = pulsar_names
-            self.N_psrs = len(pulsar_names)
+        # save list of rho labels from first core
+        self.rho_labels = [p for p in cores[0].params if 'rho' in p]
+        self.freqs = cores[0].rn_freqs  # save list of freqs from 1st core
+        self.N_freqs = len(self.freqs)
 
     def kernel_constants():
         """
@@ -214,7 +194,7 @@ class DE_factory:
             return density
 
     def setup_densities(self, rho_grid=np.linspace(-15.5, 0, 1551),
-                        log_infinitessimal=-20., save_density=True,
+                        log_infinitessimal=-36., save_density=True,
                         outdir='chain/', kde_func='FFTKDE', bandwidth=bw.sj,
                         bw_thin_chain=False, kde_thin_chain=False,
                         bw_kwargs={}, kde_kwargs={}):
@@ -252,56 +232,30 @@ class DE_factory:
         self.rho_grid = rho_grid
         self.kde_func = kde_func
 
-        if self.la_forge:
-            # calculating densities for each freq for each psr
-            pdfs, bws = [], []
-            for ii, c in enumerate(self.cores):
-                print(f'Computing densities for psr {ii}')
-                for jj, rho in enumerate(self.rho_labels):
-                    data = c(rho)  # data to represent
+        # calculating densities for each freq for each psr
+        pdfs, bws = [], []
+        for ii, c in enumerate(self.cores):
+            print(f'Computing densities for psr {ii}')
+            for jj, rho in enumerate(self.rho_labels):
+                data = c(rho)  # data to represent
 
-                    # calculate bandwidth
-                    if isinstance(bandwidth, np.ndarray):
-                        bw = bandwidth[ii][jj]
-                    elif not isinstance(bandwidth, (str, int, float)):
-                        bw = self.bandwidth(data, bw_func=bandwidth,
-                                            thin_chain=bw_thin_chain,
-                                            **bw_kwargs)
-                    else:
-                        bw = bandwidth
+                # calculate bandwidth
+                if isinstance(bandwidth, np.ndarray):
+                    bw = bandwidth[ii][jj]
+                elif not isinstance(bandwidth, (str, int, float)):
+                    bw = self.bandwidth(data, bw_func=bandwidth,
+                                        thin_chain=bw_thin_chain,
+                                        **bw_kwargs)
+                else:
+                    bw = bandwidth
 
-                    bws.append(bw)  # save bandwidths
+                bws.append(bw)  # save bandwidths
 
-                    # calculate pdf along grid points and save
-                    pdfs.append(self.density(data, bw, rho_grid=rho_grid,
-                                             kde_func=kde_func,
-                                             thin_chain=kde_thin_chain,
-                                             **kde_kwargs))
-
-        else:  # TO BE DEPRECIATED
-            # calculating densities for each freq for each psr
-            pdfs, bws = [], []
-            for psr in self.pulsar_names:
-                print(f'Creating density array for psr {psr}')
-                for rho in self.rho_labels:
-
-                    data = self.chains[psr][rho]  # data to represent
-
-                    # calculate bandwidth
-                    if not isinstance(bandwidth, (str, int, float)):
-                        bw = self.bandwidth(data, bw_func=bandwidth,
-                                            thin_chain=bw_thin_chain,
-                                            **bw_kwargs)
-                    else:
-                        bw = bandwidth
-
-                    bws.append(bw)  # save bandwidths
-
-                    # calculate pdf along grid points and save
-                    pdfs.append(self.density(data, bw, rho_grid=rho_grid,
-                                             kde_func=kde_func,
-                                             thin_chain=kde_thin_chain,
-                                             **kde_kwargs))
+                # calculate pdf along grid points and save
+                pdfs.append(self.density(data, bw, rho_grid=rho_grid,
+                                         kde_func=kde_func,
+                                         thin_chain=kde_thin_chain,
+                                         **kde_kwargs))
 
         # reshape array of densities
         pdfs = np.array(pdfs).reshape(self.N_psrs, self.N_freqs,

@@ -76,19 +76,13 @@ class signal():
             self.selected_psrs = []
 
             param_names = []
-            #id, pmap = 0, []
             for p in params:
                 if p.size is None or p.size == 1:
                     param_names.append(f'{p.name}_{name}')
-                    # pmap.append(list(np.arange(id, id+1)))
-                    # id += 1
                 else:
                     param_names.extend([f'{p.name}_{ii}_{name}'
                                         for ii in range(p.size)])
 
-                    #pmap.append(list(np.arange(id, id+p.size)))
-                    #id += p.size
-            # self.pmap = pmap
             self.param_names = param_names
             self.N_params = len(param_names)
             self.params = params
@@ -119,14 +113,6 @@ class signal():
             self.reshape = (1, len(selected_psrs),
                             len(params))
             self.length = len(self.params)
-
-            # mapping location of params
-            #id = 0
-            #pmap = []
-            #for p in self.psd_priors:  # doesn't work yet for p.size!=1
-            #    pmap.append(list(np.arange(id, self.N_params, self.N_priors)))
-            #    id += size
-            #self.pmap = pmap
 
     def get_logpdf(self, xs):
         """
@@ -648,7 +634,6 @@ class GFL():
                                                s.N_priors)))
                 id += s.N_params
                 s.pmap = pmap
-        # self.pmap = pmap
 
         # save array of signals
         self.signals = signals
@@ -749,13 +734,11 @@ class GFL():
 
         @return logpdf: total logpdf of proposed values given signal parameters
         """
-        ct = 0  # parameter counter
         logpdf = 0  # total logpdf
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_x = [xs[p] for p in s.pmap]
             logpdf += s.get_logpdf(mapped_x)
-            ct += s.length
 
         return logpdf
 
@@ -770,19 +753,16 @@ class GFL():
         interest
 
         @param u: N-dimensional unit cube
-        @return ppf: array of percent point functions (ppf) of each parameter
+        @return x: transformed prior
 
-        ct = 0  # parameter counter
-        ppf = np.ones_like(u)  # total logpdf
+        x = u.copy()  # copy hypercube
         for s in self.signals:  # iterate through signals
-            # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            x = u[ct:ct+s.length]
-            mapped_x = np.array([x[ii::len(s.psd_priors)]
-                                for ii in range(len(s.psd_priors))])
-            logpdf += s.get_logpdf(mapped_x)
-            ct += s.length
+            for ii, p in enumerate(s.pmap):
+                prior_min = s.psd_priors[ii].prior._defaults['pmin']
+                prior_max = s.psd_priors[ii].prior._defaults['pmax']
 
-        return ppf
+
+        return x
     """
 
     def ln_likelihood(self, xs):
@@ -794,7 +774,6 @@ class GFL():
 
         @return logpdf: total logpdf of proposed values given KDE density array
         """
-        ct = 0  # parameter counter
         rho = np.zeros((self.N_psrs, self.N_freqs))  # initalise empty array
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
@@ -803,7 +782,6 @@ class GFL():
             rho[s.psr_idx,
                 :s.N_freqs] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
                                          mapped_x)
-            ct += s.length
 
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
 
@@ -825,16 +803,14 @@ class GFL():
 
         @return logpdf: total logpdf of proposed values given KDE density array
         """
-        ct = 0  # parameter counter
         rho = np.zeros((self.N_psrs, self.N_freqs))  # initalise empty array
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            x = xs[ct:ct+s.length]
-            mapped_x = {s_i.name: x[ii::len(s.psd_priors)]
-                        for ii, s_i in enumerate(s.psd_priors)}
-            rho[s.psr_idx, :s.N_freqs] += s.get_rho(self.freqs[:s.N_freqs],
-                                                    mapped_x)
-            ct += s.length
+            mapped_x = {s_i.name: xs[p] for p, s_i in zip(s.pmap,
+                                                          s.psd_priors)}
+            rho[s.psr_idx,
+                :s.N_freqs] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
+                                         mapped_x)
 
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
 
