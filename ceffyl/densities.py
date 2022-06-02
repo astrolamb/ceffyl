@@ -17,19 +17,7 @@ except ImportError:
 from KDEpy import FFTKDE
 import warnings
 import os
-import re
-
-
-def numericalSort(value):
-    """
-    ceffyl.densities uses glob and requires that strings are sorted numerically
-    i.e. we want ['psr_0', 'psr_1', 'psr_2', 'psr_3', ...]
-    not ['psr_0', 'psr_1', 'psr_10', 'psr_11', ...]
-    """
-    numbers = re.compile(r'(\d+)')
-    parts = numbers.split(value)
-    parts[1::2] = map(int, parts[1::2])
-    return parts
+from natsort import natsorted
 
 
 class DE_factory:
@@ -40,7 +28,7 @@ class DE_factory:
     (https://github.com/nanograv/enterprise/)
     """
     def __init__(self, coredir, pulsar_names=[], single_pulsars=True,
-                 rho_label=None, compressed_file=None, Tspan=None, N_freqs=30):
+                 rho_label=None, Tspan=None, N_freqs=30):
         """
         Open the compressed chain files and create density estimators
 
@@ -52,10 +40,9 @@ class DE_factory:
         """
 
         if single_pulsars:  # search for cores
-            corelist = sorted(glob.glob(coredir+'/psr_**/*.core'),
-                              key=numericalSort)
+            corelist = natsorted(glob.glob(coredir+'/psr_**/*.core'))
         else:
-            corelist = sorted(glob.glob(coredir+'/*.core'), key=numericalSort)
+            corelist = natsorted(glob.glob(coredir+'/*.core'))
 
         if len(corelist) == 0:
             print('No cores found!')
