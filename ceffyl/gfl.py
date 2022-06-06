@@ -554,7 +554,13 @@ class GFL():
             self.binedges = np.load(f'{densitydir}/binedges.npy',
                                     allow_pickle=True)
         else:
-            self.rho_grid = np.load(f'{densitydir}/log10rhogrid.npy')
+            rho_grid = np.load(f'{densitydir}/log10rhogrid.npy')
+
+            db = rho_grid[1] - rho_grid[0]
+            binedges = rho_grid - 0.5*db
+            binedges = np.append(binedges, binedges[-1]+0.5*db)
+
+            self.rho_grid, self.binedges = rho_grid, binedges
 
         # selected pulsars
         if pulsar_list is None:
@@ -615,6 +621,7 @@ class GFL():
                     s.psr_idx = np.array([self.pulsar_list.index(p)
                                           for p in s.selected_psrs])
 
+        # precomputing parameter locations in proposed arrays
         id = 0
         for s in signals:
             pmap = []
@@ -627,6 +634,7 @@ class GFL():
                         pmap.append(list(np.arange(id, id+p.size)))
                         id += p.size
                 s.pmap = pmap
+
             else:
                 id_irn = id
                 for ii in range(len(s.psd_priors)):
@@ -656,22 +664,11 @@ class GFL():
             groups = [list(np.arange(0, ndim))]
 
             # make a group for each signal, with all non-global parameters
-            ct = 0
             for s in signals:
-                groups.append(list(np.arange(ct, ct+s.length)))
+                groups.extend(s.pmap)
 
                 if s.CP:  # visit GW signals x5 more often
-                    [groups.append(list(np.arange(ct, ct+s.length)))
-                     for ii in range(5)]
-
-                else:  # group individual pulsars
-                    ct2 = ct
-                    for jj in range(s.N_psrs):
-                        groups.append(list(np.arange(ct2,
-                                                     ct2+len(s.psd_priors))))
-                        ct2 += len(s.psd_priors)
-
-                ct += s.length
+                    [groups.extend(s.pmap) for ii in range(5)]
 
         # sampler
         sampler = ptmcmc(ndim, logL, logp, cov, outDir=outdir, resume=resume,
@@ -786,7 +783,8 @@ class GFL():
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
 
         # search for location of logrho values within grid
-        idx = np.searchsorted(self.rho_grid, logrho) - 1
+        # BUG?: what happens if logrho < rho_grid?
+        idx = np.searchsorted(self.binedges, logrho) - 1
 
         # access those logpdf values from density array and sum it
         logpdf = self.density[self._I, self._J, idx]
