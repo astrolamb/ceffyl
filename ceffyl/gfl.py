@@ -617,7 +617,7 @@ class GFL():
                 if s.CP:
                     s.psr_idx = np.arange(self.N_psrs)
                 else:
-                    s.psr_idx = np.array([self.pulsar_list.index(p)
+                    s.psr_idx = np.array([list(self.pulsar_list).index(p)
                                           for p in s.selected_psrs])
 
         # precomputing parameter locations in proposed arrays
