@@ -568,14 +568,13 @@ class GFL():
                                                dtype=np.unicode_, ndmin=1))
         else:
             self.pulsar_list = pulsar_list
+        self.N_psrs = len(self.pulsar_list)
 
         # find index of sublist
         file_psrs = list(np.loadtxt(f'{densitydir}/pulsar_list.txt',
                                     dtype=np.unicode_,
                                     ndmin=1))
         selected_psrs = [file_psrs.index(p) for p in self.pulsar_list]
-        self.pulsar_list = list(np.array(self.pulsar_list)[selected_psrs])
-        self.N_psrs = len(self.pulsar_list)
 
         # load densities from npy binary file for given psrs, freqs
         density_file = f'{densitydir}/density.npy'
