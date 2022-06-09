@@ -110,4 +110,3 @@ def powerlaw_genmodes(f, log10_A=-16, gamma=5, wgts=None):
 
 def infinitepower(f):
     return np.full_like(f, 1e40, dtype="d")
-    

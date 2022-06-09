@@ -27,8 +27,7 @@ class DE_factory:
     chains from a 'free spectrum' analysis from enterprise-pulsar
     (https://github.com/nanograv/enterprise/)
     """
-    def __init__(self, coredir, pulsar_names=[], single_pulsars=True,
-                 rho_label=None, Tspan=None, N_freqs=30):
+    def __init__(self, coredir, single_pulsars=True, pulsar_names=[]):
         """
         Open the compressed chain files and create density estimators
 
@@ -53,8 +52,12 @@ class DE_factory:
         self.cores = cores
 
         # get list of psr names
-        self.pulsar_names = pulsar_names
-        self.N_psrs = len(pulsar_names)
+        if single_pulsars:
+            self.pulsar_names = pulsar_names
+            self.N_psrs = len(pulsar_names)
+        else:
+            self.pulsar_names = ['freespec']
+            self.N_psrs = 1
 
         # save list of rho labels from first core
         self.rho_labels = [p for p in cores[0].params if 'rho' in p]
