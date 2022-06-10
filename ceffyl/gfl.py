@@ -739,27 +739,31 @@ class GFL():
         return logpdf
 
     # in dev
-    """
     def prior_transform(self, u):
-
+        """
         prior function for using in nested samplers, in particular dynesty
         https://dynesty.readthedocs.io/
 
         it transforms the N-dimensional unit cube u to our prior range of
         interest
 
+        NOTE: assumes uniform priors. Generalised function to be developed
+
         @param u: N-dimensional unit cube
         @return x: transformed prior
+        """
 
         x = u.copy()  # copy hypercube
+
         for s in self.signals:  # iterate through signals
             for ii, p in enumerate(s.pmap):
                 prior_min = s.psd_priors[ii].prior._defaults['pmin']
                 prior_max = s.psd_priors[ii].prior._defaults['pmax']
+                prior_diff = prior_max - prior_min
 
+                x[p] = x[p]*prior_diff + prior_min
 
         return x
-    """
 
     def ln_likelihood(self, xs):
         """
