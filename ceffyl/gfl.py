@@ -777,8 +777,8 @@ class GFL():
         rho = np.zeros((self.N_psrs, self.N_freqs))  # initalise empty array
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            mapped_x = {s_i.name: xs[p] for p, s_i in zip(s.pmap,
-                                                          s.psd_priors)}
+            mapped_x = {s_i.name: xs[p][:, None]
+                        for p, s_i in zip(s.pmap, s.psd_priors)}
             rho[s.psr_idx,
                 :s.N_freqs] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
                                          mapped_x)
@@ -807,8 +807,8 @@ class GFL():
         rho = np.zeros((self.N_psrs, self.N_freqs))  # initalise empty array
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            mapped_x = {s_i.name: xs[p] for p, s_i in zip(s.pmap,
-                                                          s.psd_priors)}
+            mapped_x = {s_i.name: xs[p][:, None]
+                        for p, s_i in zip(s.pmap, s.psd_priors)}
             rho[s.psr_idx,
                 :s.N_freqs] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
                                          mapped_x)
