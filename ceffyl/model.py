@@ -36,9 +36,23 @@ def t_process(f, log10_A=-15, gamma=4.33, alphas=None):
     """
     t-process model. PSD  amplitude at each frequency
     is a fuzzy power-law.
+
+    NOTE: assume alphas is an array with the same size as f
     """
-    alphas = np.ones_like(f) if alphas is None else alphas
+    alphas = alphas[:, None]
     return powerlaw(f, log10_A=log10_A, gamma=gamma) * alphas
+
+
+def broken_psd(f, psd=powerlaw, log10_A=-15, gamma=5,
+               alphas=None, **psd_kwargs):
+    """
+    t-process model. PSD  amplitude at each frequency
+    is a fuzzy broken powerlaw.
+
+    NOTE: assume alphas is an array with the same size as f
+    """
+    alphas = alphas[:, None]
+    return psd(f, log10_A=log10_A, gamma=gamma, **psd_kwargs) * alphas
 
 
 def t_process_adapt(f, log10_A=-15, gamma=4.33, alphas_adapt=None,
