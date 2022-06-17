@@ -43,7 +43,7 @@ def t_process(f, log10_A=-15, gamma=4.33, alphas=None):
     return powerlaw(f, log10_A=log10_A, gamma=gamma) * alphas
 
 
-def broken_t_process(f, log10_A=-15, gamma=5, delta=0.1, log10_fb=-9.,
+def broken_t_process(f, log10_A=-15, gamma=5, delta=0., log10_fb=-9.,
                      kappa=0.1, alphas=None):
     """
     t-process model. PSD  amplitude at each frequency
