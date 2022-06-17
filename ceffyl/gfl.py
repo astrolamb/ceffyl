@@ -739,27 +739,31 @@ class GFL():
         return logpdf
 
     # in dev
-    """
     def prior_transform(self, u):
-
+        """
         prior function for using in nested samplers, in particular dynesty
         https://dynesty.readthedocs.io/
 
         it transforms the N-dimensional unit cube u to our prior range of
         interest
 
+        NOTE: assumes uniform priors. Generalised function to be developed
+
         @param u: N-dimensional unit cube
         @return x: transformed prior
+        """
 
         x = u.copy()  # copy hypercube
+
         for s in self.signals:  # iterate through signals
             for ii, p in enumerate(s.pmap):
                 prior_min = s.psd_priors[ii].prior._defaults['pmin']
                 prior_max = s.psd_priors[ii].prior._defaults['pmax']
+                prior_diff = prior_max - prior_min
 
+                x[p] = x[p]*prior_diff + prior_min
 
         return x
-    """
 
     def ln_likelihood(self, xs):
         """
@@ -773,8 +777,8 @@ class GFL():
         rho = np.zeros((self.N_psrs, self.N_freqs))  # initalise empty array
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            mapped_x = {s_i.name: xs[p] for p, s_i in zip(s.pmap,
-                                                          s.psd_priors)}
+            mapped_x = {s_i.name: xs[p]
+                        for p, s_i in zip(s.pmap, s.psd_priors)}
             rho[s.psr_idx,
                 :s.N_freqs] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
                                          mapped_x)
@@ -803,8 +807,8 @@ class GFL():
         rho = np.zeros((self.N_psrs, self.N_freqs))  # initalise empty array
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            mapped_x = {s_i.name: xs[p] for p, s_i in zip(s.pmap,
-                                                          s.psd_priors)}
+            mapped_x = {s_i.name: xs[p][:, None]
+                        for p, s_i in zip(s.pmap, s.psd_priors)}
             rho[s.psr_idx,
                 :s.N_freqs] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
                                          mapped_x)
