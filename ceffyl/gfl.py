@@ -742,7 +742,7 @@ class GFL():
                                                       resume=resume,
                                                       log_dir=outdir,
                                                       **nested_kwargs)
-
+            return sampler
 
     def initial_samples(self):
         """
