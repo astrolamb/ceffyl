@@ -187,7 +187,7 @@ class DE_factory:
                         log_infinitessimal=-36., save_density=True,
                         outdir='chain/', kde_func='FFTKDE', bandwidth=bw.sj,
                         bw_thin_chain=False, kde_thin_chain=False,
-                        bw_kwargs={}, kde_kwargs={}):
+                        change_nans=True, bw_kwargs={}, kde_kwargs={}):
         """
         A method to setup densitites for all chains and save them as a .npy
         file
@@ -205,6 +205,9 @@ class DE_factory:
         @param kde_func: KDE function to be used from ['kalepy', 'FFTKDE']
         @param bandwidth: Bandwidth of KDEs - may be a function, float, or
                           string associated to chosen KDE function
+        @param change_nans: Sometimes FFTKDE will returns nans, causing issues
+                            with ultranest. This changes nans to value of
+                            log_infinitessimal
         @param bw_kwargs: kwargs for bandwidth function
         @param kde_kwargs: kwargs for KDE density function
 
@@ -256,6 +259,10 @@ class DE_factory:
         if log_infinitessimal is not None:
             infs = np.isneginf(pdfs)
             pdfs[infs] = log_infinitessimal
+
+        if change_nans:  # if nans, convert to log infinitessimal
+            print('removing nans')
+            pdfs = np.nan_to_num(pdfs, nan=log_infinitessimal)
 
         self.pdfs = pdfs
 
