@@ -2,6 +2,7 @@
 import numpy as np
 from enterprise.signals.parameter import Uniform
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
+import ultranest
 from ceffyl import model
 import os
 import pickle
@@ -585,7 +586,8 @@ class GFL():
     def setup_sampler(self, signals, outdir, logL, logp, resume=True,
                       jump=True, groups=None, loglkwargs={}, logpkwargs={},
                       ptmcmc_kwargs={}, empirical_distr=None,
-                      save_ext_dists=False):
+                      save_ext_dists=False, nested=False,
+                      post_sample_size=10000, nested_kwargs={}):
         """
         Method to setup sampler
 
@@ -593,7 +595,8 @@ class GFL():
         @params signals: A list of signals to be searched over
         @params outdir: Path to directory to save MCMC chain
         @params logL: Log likelihood function for the MCMC
-        @params logp: Log prior function for the MCMC
+        @params logp: Log prior function for the MCMC. This should be a prior
+                      transform function if nested=True
         @params resume: Flag to toggle option to resume MCMC run from a
                         previous run
         @params jump: Flag to use jump proposals in parallel tempering
@@ -603,6 +606,9 @@ class GFL():
         @param ptmcmc_kwargs: additional kwargs for PTMCMCSampler
         @param empirical_distr: add empirical distributions to jump proposals
         @param save_ext_dists: flag to save empirical distributions
+        @param nested: flag to switch on nested sampling
+        @param post_sample_size: number of sample to setup posterior histograms
+        @param nested_kwargs: kwargs for ultranest sampler
 
         @return sampler: initialised PTMCMC sampler
         """
@@ -652,65 +658,91 @@ class GFL():
         # setup empty 2d grid to vectorize product of pdfs
         self._I, self._J = np.ogrid[:self.N_psrs, :self.N_freqs]
 
-        # initial jump covariance matrix
-        if os.path.exists(outdir+'/cov.npy'):
-            cov = np.load(outdir+'/cov.npy')
+        if not nested:
+            # initial jump covariance matrix
+            if os.path.exists(outdir+'/cov.npy'):
+                cov = np.load(outdir+'/cov.npy')
+            else:
+                cov = np.diag(np.ones(ndim) * 0.1**2)
+
+            # group params for PT swaps
+            if groups is None:
+                groups = [list(np.arange(0, ndim))]
+
+                # make a group for each signal, with all non-global parameters
+                for s in signals:
+                    groups.extend(s.pmap)
+
+                    if s.CP:  # visit GW signals x5 more often
+                        [groups.extend(s.pmap) for ii in range(5)]
+
+            # sampler
+            sampler = ptmcmc(ndim, logL, logp, cov, outDir=outdir, resume=resume,
+                             loglkwargs=loglkwargs, logpkwargs=logpkwargs,
+                             groups=groups, **ptmcmc_kwargs)
+
+            # save parameter names
+            np.savetxt(outdir+'/pars.txt', self.param_names, fmt='%s')
+
+            # PT swap jump proposals
+            if jump:
+                jp = JumpProposal(signals, empirical_distr=empirical_distr,
+                                  save_ext_dists=save_ext_dists, outdir=outdir)
+                sampler.jp = jp
+
+                # always add draw from prior
+                sampler.addProposalToCycle(jp.draw_from_prior, 5)
+
+                # flags to automatically add prior draws given certain signals
+                red_noise, gw_signal = False, False
+                for s in signals:
+                    if s.CP:
+                        gw_signal = True
+                    else:
+                        red_noise = True
+
+                # Red noise prior draw
+                if red_noise:
+                    print('Adding red noise prior draws...\n')
+                    sampler.addProposalToCycle(jp.draw_from_red_prior, 10)
+
+                # GWB uniform distribution draw
+                if gw_signal:
+                    print('Adding GWB uniform distribution draws...\n')
+                    sampler.addProposalToCycle(jp.draw_from_gwb_log_uniform_dist,
+                                            10)
+
+                # try adding empirical proposals
+                if empirical_distr is not None:
+                    print('Attempting to add empirical proposals...\n')
+                    sampler.addProposalToCycle(jp.draw_from_empirical_distr, 10)
+
+            return sampler
+        
         else:
-            cov = np.diag(np.ones(ndim) * 0.1**2)
 
-        # group params for PT swaps
-        if groups is None:
-            groups = [list(np.arange(0, ndim))]
+            posterior_samples, hist_cumulative, binmid = [], [], []
+            for s in self.signals:  # iterate through signals
+                for ii, p in enumerate(s.pmap):
+                    posterior_samples.append([s.psd_priors[ii].sample()
+                                              for jj in
+                                              range(post_sample_size)])
+                    hist, bin_edges = np.histogram(posterior_samples,
+                                                   bins='fd')
+                    hist_cumulative.append(np.cumsum(hist/hist.sum()))
+                    binmid.append((bin_edges[:-1] + bin_edges[1:])/2)
+                    
+            self.posterior_samples = posterior_samples
+            self.hist_cumulative = hist_cumulative
+            self.binmid = binmid
 
-            # make a group for each signal, with all non-global parameters
-            for s in signals:
-                groups.extend(s.pmap)
-
-                if s.CP:  # visit GW signals x5 more often
-                    [groups.extend(s.pmap) for ii in range(5)]
-
-        # sampler
-        sampler = ptmcmc(ndim, logL, logp, cov, outDir=outdir, resume=resume,
-                         loglkwargs=loglkwargs, logpkwargs=logpkwargs,
-                         groups=groups, **ptmcmc_kwargs)
-
-        # save parameter names
-        np.savetxt(outdir+'/pars.txt', self.param_names, fmt='%s')
-
-        # PT swap jump proposals
-        if jump:
-            jp = JumpProposal(signals, empirical_distr=empirical_distr,
-                              save_ext_dists=save_ext_dists, outdir=outdir)
-            sampler.jp = jp
-
-            # always add draw from prior
-            sampler.addProposalToCycle(jp.draw_from_prior, 5)
-
-            # flags to automatically add prior draws given certain signals
-            red_noise, gw_signal = False, False
-            for s in signals:
-                if s.CP:
-                    gw_signal = True
-                else:
-                    red_noise = True
-
-            # Red noise prior draw
-            if red_noise:
-                print('Adding red noise prior draws...\n')
-                sampler.addProposalToCycle(jp.draw_from_red_prior, 10)
-
-            # GWB uniform distribution draw
-            if gw_signal:
-                print('Adding GWB uniform distribution draws...\n')
-                sampler.addProposalToCycle(jp.draw_from_gwb_log_uniform_dist,
-                                           10)
-
-            # try adding empirical proposals
-            if empirical_distr is not None:
-                print('Attempting to add empirical proposals...\n')
-                sampler.addProposalToCycle(jp.draw_from_empirical_distr, 10)
-
-        return sampler
+            sampler = ultranest.ReactiveNestedSampler(self.param_names,
+                                                      loglike=logL,
+                                                      transform=logp,
+                                                      resume=resume,
+                                                      log_dir=outdir,
+                                                      **nested_kwargs)
+            return sampler
 
     def initial_samples(self):
         """
@@ -738,11 +770,9 @@ class GFL():
 
         return logpdf
 
-    # in dev
-    def prior_transform(self, u):
+    def transform_uniform(self, u):
         """
-        prior function for using in nested samplers, in particular dynesty
-        https://dynesty.readthedocs.io/
+        prior function for using in nested samplers
 
         it transforms the N-dimensional unit cube u to our prior range of
         interest
@@ -762,6 +792,27 @@ class GFL():
                 prior_diff = prior_max - prior_min
 
                 x[p] = x[p]*prior_diff + prior_min
+
+        return x
+
+    def transform_histogram(self, xs):
+        """
+        prior function for using in nested samplers
+
+        it transforms the N-dimensional unit cube u to our prior range of
+        interest
+
+        tutorial for this function:
+        https://johannesbuchner.github.io/UltraNest/priors.html#Non-analytic-priors
+
+        @param u: N-dimensional unit cube
+        @return x: transformed prior
+        """
+        x = np.zeros_like(xs)
+        for s in self.signals:  # iterate through signals
+            for ii, p in enumerate(s.pmap):
+                x[p] = np.interp(xs[p], self.hist_cumulative[ii],
+                                 self.binmid[ii])
 
         return x
 
