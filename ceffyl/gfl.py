@@ -581,7 +581,7 @@ class GFL():
         density_file = f'{densitydir}/density.npy'
         density = np.load(density_file, allow_pickle=True)[selected_psrs]
 
-        self.density = density
+        self.density = np.nan_to_num(density, nan=-36.)
 
     def setup_sampler(self, signals, outdir, logL, logp, resume=True,
                       jump=True, groups=None, loglkwargs={}, logpkwargs={},
