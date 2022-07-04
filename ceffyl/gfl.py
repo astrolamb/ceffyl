@@ -581,7 +581,7 @@ class GFL():
         density_file = f'{densitydir}/density.npy'
         density = np.load(density_file, allow_pickle=True)[selected_psrs]
 
-        self.density = density
+        self.density = np.nan_to_num(density, nan=-36.)
 
     def setup_sampler(self, signals, outdir, logL, logp, resume=True,
                       jump=True, groups=None, loglkwargs={}, logpkwargs={},
@@ -718,21 +718,18 @@ class GFL():
                     sampler.addProposalToCycle(jp.draw_from_empirical_distr, 10)
 
             return sampler
-        
-        else:
 
+        else:  # nested sampling prep
             posterior_samples, hist_cumulative, binmid = [], [], []
             for s in self.signals:  # iterate through signals
                 for ii, p in enumerate(s.pmap):
-                    posterior_samples.append([s.psd_priors[ii].sample()
-                                              for jj in
-                                              range(post_sample_size)])
+                    posterior_samples = [s.psd_priors[ii].sample()
+                                         for jj in range(post_sample_size)]
                     hist, bin_edges = np.histogram(posterior_samples,
                                                    bins='fd')
                     hist_cumulative.append(np.cumsum(hist/hist.sum()))
                     binmid.append((bin_edges[:-1] + bin_edges[1:])/2)
-                    
-            self.posterior_samples = posterior_samples
+
             self.hist_cumulative = hist_cumulative
             self.binmid = binmid
 
