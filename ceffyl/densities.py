@@ -27,7 +27,7 @@ class DE_factory:
     chains from a 'free spectrum' analysis from enterprise-pulsar
     (https://github.com/nanograv/enterprise/)
     """
-    def __init__(self, coredir, single_pulsars=True, pulsar_names=[]):
+    def __init__(self, coredir, recursive=True, pulsar_names=[]):
         """
         Open the compressed chain files and create density estimators
 
@@ -38,7 +38,7 @@ class DE_factory:
                                Default: True; set False for PTA freespec
         """
 
-        if single_pulsars:  # search for cores
+        if recursive:  # search for cores
             corelist = natsorted(glob.glob(coredir+'/psr_**/*.core'))
         else:
             corelist = natsorted(glob.glob(coredir+'/*.core'))
@@ -52,9 +52,12 @@ class DE_factory:
         self.cores = cores
 
         # get list of psr names
-        if single_pulsars:
+        if len(corelist) > 1:
             self.pulsar_names = pulsar_names
             self.N_psrs = len(pulsar_names)
+        elif len(corelist) == 1 and recursive is False:
+            self.pulsar_names = pulsar_names
+            self.N_psrs = 1
         else:
             self.pulsar_names = ['freespec']
             self.N_psrs = 1
