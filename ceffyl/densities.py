@@ -55,7 +55,7 @@ class DE_factory:
         if len(corelist) > 1:
             self.pulsar_names = pulsar_names
             self.N_psrs = len(pulsar_names)
-        elif len(corelist) == 1 and recursive is False:
+        elif len(corelist) == 1 and recursive:
             self.pulsar_names = pulsar_names
             self.N_psrs = 1
         else:
