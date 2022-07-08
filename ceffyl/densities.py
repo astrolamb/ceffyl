@@ -74,7 +74,7 @@ class DE_factory:
         pass
 
     def bandwidth(self, data, bw_func=bw.sj, thin_chain=False,
-                  kernel_constant=2.214, bw_kwargs={}):
+                  kernel_constant=1, bw_kwargs={}):
         """
         Method to calculate bandwidth for a given MCMC chain
 
