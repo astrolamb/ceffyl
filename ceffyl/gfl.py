@@ -837,13 +837,9 @@ class GFL():
         # BUG?: what happens if logrho < rho_grid?
         idx = np.searchsorted(self.binedges, logrho) - 1
 
-        # access those logpdf values from density array and sum it
-        if idx < 0 or idx >= self.density.shape()[2]:
-            return -np.inf
-        else:
-            logpdf = self.density[self._I, self._J, idx]
+        logpdf = self.density[self._I, self._J, idx]
 
-            return np.sum(logpdf)
+        return np.sum(logpdf)
 
     def hist_ln_likelihood(self, xs):
         """
