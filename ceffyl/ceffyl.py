@@ -146,7 +146,7 @@ class signal():
         return np.hstack([p.sample() for p in self.params])
 
 
-class ceffyl():
+class Ceffyl():
     """
     // Ceffyl //
 
