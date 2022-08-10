@@ -385,7 +385,7 @@ class JumpProposal(object):
         """
         Method to setup sampler
 
-        //Inputs//
+        // Inputs //
         @params ceffyl: ceffyl PTA object
         @params outdir: Path to directory to save MCMC chain
         @params logL: Log likelihood function for the MCMC
@@ -402,6 +402,7 @@ class JumpProposal(object):
         @param save_ext_dists: flag to save empirical distributions
         @param nested: flag to switch on nested sampling
         @param post_sample_size: number of sample to setup posterior histograms
+                                 for nested sampling
         @param nested_kwargs: kwargs for ultranest sampler
 
         @return sampler: initialised PTMCMC sampler

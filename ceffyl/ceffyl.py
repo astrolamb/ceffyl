@@ -148,14 +148,14 @@ class signal():
 
 class ceffyl():
     """
-    The Generalised Factorised Likelihood (GFL) Method
+    // Ceffyl //
 
-    A class to fit signals to single pulsar free spectra via PTMCMC to derive
-    the signals' spectral characteristics
+    A class to fit signals to free spectra to derive the signals' spectral
+    characteristics
     """
     def __init__(self, signals, datadir, pulsar_list=None, hist=False):
         """
-        Initialise the GFL
+        Initialise the class and return a ceffyl object
 
         @params signals: A list of signals to be searched over
         @params datadir: location of directory containing numpy arrays of
@@ -164,6 +164,8 @@ class ceffyl():
         @params pulsar_list: list of pulsars to search over
         @param hist: Flag to state that you're using histograms instead of
                      KDEs
+
+        @param ceffyl: return a ceffyl object
         """
 
         # saving properties
