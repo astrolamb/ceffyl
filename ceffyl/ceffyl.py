@@ -1,7 +1,7 @@
 # imports
 import numpy as np
 from enterprise.signals.parameter import Uniform
-from ceffyl import model
+from ceffyl import models
 
 """
 Classes to create noise signals and a parallel tempered PTMCMCSampler object
