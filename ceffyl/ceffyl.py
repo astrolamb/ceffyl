@@ -15,7 +15,7 @@ class signal():
     These signals can be a common process (GW) or individual to each pulsar
     (intrinsic red noise)
     """
-    def __init__(self, N_freqs, selected_psrs=None, psd=model.powerlaw,
+    def __init__(self, N_freqs, selected_psrs=None, psd=models.powerlaw,
                  params=[Uniform(-18, -12)('log10_A'), Uniform(0, 7)('gamma')],
                  const_params={}, common_process=True, name='gw',
                  psd_kwargs={}):
