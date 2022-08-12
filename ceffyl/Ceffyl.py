@@ -146,14 +146,14 @@ class signal():
         return np.hstack([p.sample() for p in self.params])
 
 
-class Ceffyl():
+class ceffyl():
     """
     // Ceffyl //
 
     A class to fit signals to free spectra to derive the signals' spectral
     characteristics
     """
-    def __init__(self, signals, datadir, pulsar_list=None, hist=False):
+    def __init__(self, datadir, pulsar_list=None, hist=False):
         """
         Initialise the class and return a ceffyl object
 
@@ -207,12 +207,28 @@ class Ceffyl():
 
         self.density = np.nan_to_num(density, nan=-36.)
 
+        return
+
+    def add_signals(self, signals,
+                    nested_posterior_sample_size=10000):
+        """
+        Method to add signals to the ceffyl object
+
+        @param nested_posterior_sample_size: number of sample to setup
+                                             posterior histograms for nested
+                                             sampling
+        """
+
+        # check if signals is a list
+        if not isinstance(signals, list):
+            raise TypeError("Please supply of signals as a list")
+
         # check if pulsars in signals are in total pulsar array
         for s in signals:
             if not np.isin(s.selected_psrs, self.pulsar_list).all():
-                print('Mismatch between density array pulsars and the pulsars'
-                      + ' you selected')
-                return
+                raise ValueError('Mismatch between density array pulsars and' +
+                                 'the pulsars you selected')
+
             else:  # save idx of (subset of) psrs within larger list
                 if s.CP:
                     s.psr_idx = np.arange(self.N_psrs)
@@ -251,6 +267,20 @@ class Ceffyl():
 
         # setup empty 2d grid to vectorize product of pdfs
         self._I, self._J = np.ogrid[:self.N_psrs, :self.N_freqs]
+
+        # information for nested sampling
+        posterior_samples, hist_cumulative, binmid = [], [], []
+        for s in self.signals:  # iterate through signals
+            for ii, p in enumerate(s.pmap):
+                posterior_samples = [s.psd_priors[ii].sample() for jj in
+                                     range(nested_posterior_sample_size)]
+                hist, bin_edges = np.histogram(posterior_samples,
+                                               bins='fd')
+                hist_cumulative.append(np.cumsum(hist/hist.sum()))
+                binmid.append((bin_edges[:-1] + bin_edges[1:])/2)
+
+        self.hist_cumulative = hist_cumulative
+        self.binmid = binmid
 
         return self
 

@@ -1,5 +1,4 @@
 import numpy as np
-import ultranest
 import pickle
 import os
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
@@ -377,119 +376,88 @@ class JumpProposal(object):
 
         return q, float(lqxy)
 
-    def setup_sampler(self, ceffyl, outdir, logL, logp, resume=True,
-                      jump=True, groups=None, loglkwargs={}, logpkwargs={},
-                      ptmcmc_kwargs={}, empirical_distr=None,
-                      save_ext_dists=False, nested=False,
-                      post_sample_size=10000, nested_kwargs={}):
-        """
-        Method to setup sampler
 
-        // Inputs //
-        @params ceffyl: ceffyl PTA object
-        @params outdir: Path to directory to save MCMC chain
-        @params logL: Log likelihood function for the MCMC
-        @params logp: Log prior function for the MCMC. This should be a prior
-                      transform function if nested=True
-        @params resume: Flag to toggle option to resume MCMC run from a
-                        previous run
-        @params jump: Flag to use jump proposals in parallel tempering
-        @params groups: indices for which to perform adaptive jumps
-        @param loglkwargs: additional kwargs for log likelihood
-        @param logpkwargs: additional kwargs for log prior
-        @param ptmcmc_kwargs: additional kwargs for PTMCMCSampler
-        @param empirical_distr: add empirical distributions to jump proposals
-        @param save_ext_dists: flag to save empirical distributions
-        @param nested: flag to switch on nested sampling
-        @param post_sample_size: number of sample to setup posterior histograms
-                                 for nested sampling
-        @param nested_kwargs: kwargs for ultranest sampler
+def setup_sampler(ceffyl, outdir, logL, logp, resume=True, jump=True,
+                  groups=None, loglkwargs={}, logpkwargs={}, ptmcmc_kwargs={},
+                  empirical_distr=None,  save_ext_dists=False):
+    """
+    Method to setup sampler
 
-        @return sampler: initialised PTMCMC sampler
-        """
+    // Inputs //
+    @params ceffyl: ceffyl PTA object
+    @params outdir: Path to directory to save MCMC chain
+    @params logL: Log likelihood function for the MCMC
+    @params logp: Log prior function for the MCMC. This should be a prior
+                    transform function if nested=True
+    @params resume: Flag to toggle option to resume MCMC run from a
+                    previous run
+    @params jump: Flag to use jump proposals in parallel tempering
+    @params groups: indices for which to perform adaptive jumps
+    @param loglkwargs: additional kwargs for log likelihood
+    @param logpkwargs: additional kwargs for log prior
+    @param ptmcmc_kwargs: additional kwargs for PTMCMCSampler
+    @param empirical_distr: add empirical distributions to jump proposals
+    @param save_ext_dists: flag to save empirical distributions
 
-        if not nested:
-            # initial jump covariance matrix
-            if os.path.exists(outdir+'/cov.npy'):
-                cov = np.load(outdir+'/cov.npy')
+    @return sampler: initialised PTMCMC sampler
+    """
+
+    # initial jump covariance matrix
+    if os.path.exists(outdir+'/cov.npy'):
+        cov = np.load(outdir+'/cov.npy')
+    else:
+        cov = np.diag(np.ones(ceffyl.ndim) * 0.1**2)
+
+    # group params for PT swaps
+    if groups is None:
+        groups = [list(np.arange(0, ceffyl.ndim))]
+
+        # make a group for each signal, with all non-global parameters
+        for s in ceffyl.signals:
+            groups.extend(s.pmap)
+
+            if s.CP:  # visit GW signals x5 more often
+                [groups.extend(s.pmap) for ii in range(5)]
+
+    # sampler
+    sampler = ptmcmc(ceffyl.ndim, logL, logp, cov,
+                     outDir=outdir, resume=resume,
+                     loglkwargs=loglkwargs, logpkwargs=logpkwargs,
+                     groups=groups, **ptmcmc_kwargs)
+
+    # save parameter names
+    np.savetxt(outdir+'/pars.txt', ceffyl.param_names, fmt='%s')
+
+    # PT swap jump proposals
+    if jump:
+        jp = JumpProposal(ceffyl.signals, empirical_distr=empirical_distr,
+                          save_ext_dists=save_ext_dists, outdir=outdir)
+        sampler.jp = jp
+
+        # always add draw from prior
+        sampler.addProposalToCycle(jp.draw_from_prior, 5)
+
+        # flags to automatically add prior draws given certain signals
+        red_noise, gw_signal = False, False
+        for s in ceffyl.signals:
+            if s.CP:
+                gw_signal = True
             else:
-                cov = np.diag(np.ones(ceffyl.ndim) * 0.1**2)
+                red_noise = True
 
-            # group params for PT swaps
-            if groups is None:
-                groups = [list(np.arange(0, ceffyl.ndim))]
+        # Red noise prior draw
+        if red_noise:
+            print('Adding red noise prior draws...\n')
+            sampler.addProposalToCycle(jp.draw_from_red_prior, 10)
 
-                # make a group for each signal, with all non-global parameters
-                for s in ceffyl.signals:
-                    groups.extend(s.pmap)
+        # GWB uniform distribution draw
+        if gw_signal:
+            print('Adding GWB uniform distribution draws...\n')
+            sampler.addProposalToCycle(jp.draw_from_gwb_loguni_dist, 10)
 
-                    if s.CP:  # visit GW signals x5 more often
-                        [groups.extend(s.pmap) for ii in range(5)]
+        # try adding empirical proposals
+        if empirical_distr is not None:
+            print('Attempting to add empirical proposals...\n')
+            sampler.addProposalToCycle(jp.draw_from_empirical_distr, 10)
 
-            # sampler
-            sampler = ptmcmc(ceffyl.ndim, logL, logp, cov,
-                             outDir=outdir, resume=resume,
-                             loglkwargs=loglkwargs, logpkwargs=logpkwargs,
-                             groups=groups, **ptmcmc_kwargs)
-
-            # save parameter names
-            np.savetxt(outdir+'/pars.txt', ceffyl.param_names, fmt='%s')
-
-            # PT swap jump proposals
-            if jump:
-                jp = JumpProposal(ceffyl.signals,
-                                  empirical_distr=empirical_distr,
-                                  save_ext_dists=save_ext_dists, outdir=outdir)
-                sampler.jp = jp
-
-                # always add draw from prior
-                sampler.addProposalToCycle(jp.draw_from_prior, 5)
-
-                # flags to automatically add prior draws given certain signals
-                red_noise, gw_signal = False, False
-                for s in ceffyl.signals:
-                    if s.CP:
-                        gw_signal = True
-                    else:
-                        red_noise = True
-
-                # Red noise prior draw
-                if red_noise:
-                    print('Adding red noise prior draws...\n')
-                    sampler.addProposalToCycle(jp.draw_from_red_prior, 10)
-
-                # GWB uniform distribution draw
-                if gw_signal:
-                    print('Adding GWB uniform distribution draws...\n')
-                    sampler.addProposalToCycle(jp.draw_from_gwb_loguni_dist,
-                                               10)
-
-                # try adding empirical proposals
-                if empirical_distr is not None:
-                    print('Attempting to add empirical proposals...\n')
-                    sampler.addProposalToCycle(jp.draw_from_empirical_distr,
-                                               10)
-
-            return sampler
-
-        else:  # nested sampling prep
-            posterior_samples, hist_cumulative, binmid = [], [], []
-            for s in self.signals:  # iterate through signals
-                for ii, p in enumerate(s.pmap):
-                    posterior_samples = [s.psd_priors[ii].sample()
-                                         for jj in range(post_sample_size)]
-                    hist, bin_edges = np.histogram(posterior_samples,
-                                                   bins='fd')
-                    hist_cumulative.append(np.cumsum(hist/hist.sum()))
-                    binmid.append((bin_edges[:-1] + bin_edges[1:])/2)
-
-            self.hist_cumulative = hist_cumulative
-            self.binmid = binmid
-
-            sampler = ultranest.ReactiveNestedSampler(ceffyl.param_names,
-                                                      loglike=logL,
-                                                      transform=logp,
-                                                      resume=resume,
-                                                      log_dir=outdir,
-                                                      **nested_kwargs)
-            return sampler
+    return sampler
