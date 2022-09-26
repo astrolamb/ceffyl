@@ -64,7 +64,7 @@ class signal():
         # save information if signal is common to all pulsars
         if common_process:
             self.CP = True
-            self.selected_psrs = []
+            self.selected_psrs = selected_psrs
 
             param_names = []
             for p in params:
@@ -223,18 +223,21 @@ class ceffyl():
         if not isinstance(signals, list):
             raise TypeError("Please supply of signals as a list")
 
-        # check if pulsars in signals are in total pulsar array
+        # check if pulsars in signals are in density array
         for s in signals:
+            if s.selected_psrs is None:
+                s.selected_psrs = self.pulsar_list
+
             if not np.isin(s.selected_psrs, self.pulsar_list).all():
                 raise ValueError('Mismatch between density array pulsars and' +
                                  'the pulsars you selected')
 
             else:  # save idx of (subset of) psrs within larger list
-                if s.CP:
-                    s.psr_idx = np.arange(self.N_psrs)
-                else:
-                    s.psr_idx = np.array([list(self.pulsar_list).index(p)
-                                          for p in s.selected_psrs])
+                #if s.CP:
+                #    s.psr_idx = np.arange(self.N_psrs)
+                #else:
+                s.psr_idx = np.array([list(self.pulsar_list).index(p)
+                                      for p in s.selected_psrs])
 
         # precomputing parameter locations in proposed arrays
         id = 0
