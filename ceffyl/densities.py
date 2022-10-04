@@ -48,9 +48,7 @@ class DE_factory:
             print('No cores found!')
             return
 
-        # load core files
-        cores = np.array([co.Core(corepath=core) for core in corelist])
-        self.cores = cores
+        self.corelist = corelist
 
         # get list of psr names
         if len(corelist) > 1:
@@ -64,11 +62,12 @@ class DE_factory:
             self.N_psrs = 1
 
         # save list of rho labels from first core
+        c = co.Core(corepath=corelist[0])  # load a core
         if rho_labels is None:
-            self.rho_labels = [p for p in cores[0].params if 'rho' in p]
+            self.rho_labels = [p for p in c.params if 'rho' in p]
         else:
             self.rho_labels = rho_labels
-        self.freqs = cores[0].rn_freqs  # save list of freqs from 1st core
+        self.freqs = c.rn_freqs  # save list of freqs from 1st core
         self.N_freqs = len(self.freqs)
 
     def kernel_constants():
@@ -194,7 +193,8 @@ class DE_factory:
                         log_infinitessimal=-36., save_density=True,
                         outdir='chain/', kde_func='FFTKDE', bandwidth=bw.sj,
                         bw_thin_chain=False, kde_thin_chain=False,
-                        change_nans=True, bw_kwargs={}, kde_kwargs={}):
+                        change_nans=True, bw_kwargs={}, kde_kwargs={},
+                        bootstrap=False, Nbootstrap=None):
         """
         A method to setup densitites for all chains and save them as a .npy
         file
@@ -217,6 +217,8 @@ class DE_factory:
                             log_infinitessimal
         @param bw_kwargs: kwargs for bandwidth function
         @param kde_kwargs: kwargs for KDE density function
+        @param bootstrap: boolean to take bootstraps of samples
+        @param Nbootstrap: number of samples to bootstrap if bootstrap==True
 
         @return density: array of densities
         @return kdes: array of kde objects (if chosen)
@@ -234,10 +236,21 @@ class DE_factory:
 
         # calculating densities for each freq for each psr
         pdfs, bws = [], []
-        for ii, c in enumerate(self.cores):
+        for ii, c in enumerate(self.corelist):
             print(f'Computing densities for psr {ii}')
+            core = co.Core(corepath=c)
+
+            # if bootstrapping single pulsars
+            if bootstrap:
+                if Nbootstrap is None:
+                    Nbootstrap = core.chain[core.burn:].shape[0]
+                bootmask = np.random.randint(0, Nbootstrap)
+
             for jj, rho in enumerate(self.rho_labels):
-                data = c(rho)  # data to represent
+                data = core(rho)  # data to represent
+
+                if bootstrap:  # bootstrap data
+                    data = data[bootmask]
 
                 # calculate bandwidth
                 if isinstance(bandwidth, np.ndarray):

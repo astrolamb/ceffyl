@@ -74,6 +74,7 @@ class signal():
                     param_names.extend([f'{p.name}_{ii}_{name}'
                                         for ii in range(p.size)])
 
+            self.N_psrs = len(selected_psrs)
             self.param_names = param_names
             self.N_params = len(param_names)
             self.params = params
