@@ -249,7 +249,6 @@ class DE_factory:
                     
                     bootmask = np.random.randint(0, high=Nbootstrap,
                                                  size=Nbootstrap)
-                    print(Nbootstrap)
                     data = data[bootmask]
 
                 # calculate bandwidth
