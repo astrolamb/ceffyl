@@ -237,14 +237,14 @@ class DE_factory:
         # calculating densities for each freq for each psr
         pdfs, bws = [], []
         for ii, c in enumerate(self.corelist):
-            print(f'Computing densities for psr {ii}')
+            print(f'Computing densities for psr {ii}', flush=True)
             core = co.Core(corepath=c)
 
             # if bootstrapping single pulsars
             if bootstrap:
                 if Nbootstrap is None:
                     Nbootstrap = core.chain[core.burn:].shape[0]
-                bootmask = np.random.randint(0, Nbootstrap)
+                bootmask = np.random.randint(0, Nbootstrap, Nbootstrap)
 
             for jj, rho in enumerate(self.rho_labels):
                 data = core(rho)  # data to represent
