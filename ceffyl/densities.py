@@ -243,7 +243,7 @@ class DE_factory:
             # if bootstrapping single pulsars
             if bootstrap:
                 if Nbootstrap is None:
-                    Nbootstrap = core.chain[core.burn:].shape[0]
+                    Nbootstrap = core(self.rho_labels[0]).shape[0]
                 bootmask = np.random.randint(0, Nbootstrap, Nbootstrap)
 
             for jj, rho in enumerate(self.rho_labels):
