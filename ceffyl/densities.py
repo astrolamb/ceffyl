@@ -240,16 +240,14 @@ class DE_factory:
             print(f'Computing densities for psr {ii}', flush=True)
             core = co.Core(corepath=c)
 
-            # if bootstrapping single pulsars
-            if bootstrap:
-                if Nbootstrap is None:
-                    Nbootstrap = core(self.rho_labels[0]).shape[0]
-                bootmask = np.random.randint(0, Nbootstrap, Nbootstrap)
-
             for jj, rho in enumerate(self.rho_labels):
                 data = core(rho)  # data to represent
 
                 if bootstrap:  # bootstrap data
+                    if Nbootstrap is None:
+                        Nbootstrap = data.shape[0]
+                    
+                    bootmask = np.random.randint(0, Nbootstrap, Nbootstrap)
                     data = data[bootmask]
 
                 # calculate bandwidth
