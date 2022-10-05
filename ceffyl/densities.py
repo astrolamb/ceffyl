@@ -247,7 +247,9 @@ class DE_factory:
                     if Nbootstrap is None:
                         Nbootstrap = data.shape[0]
                     
-                    bootmask = np.random.randint(0, Nbootstrap, Nbootstrap)
+                    bootmask = np.random.randint(0, high=Nbootstrap,
+                                                 size=Nbootstrap)
+                    print(Nbootstrap)
                     data = data[bootmask]
 
                 # calculate bandwidth
