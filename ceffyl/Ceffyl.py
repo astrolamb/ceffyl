@@ -363,7 +363,7 @@ class ceffyl():
         """
 
         # initalise array of rho values with lower prior boundary
-        rho = np.ones((self.N_psrs, self.N_freqs)) * 2 * 10**self.rho_grid[0]
+        rho = np.ones((self.N_psrs, self.N_freqs)) * 10**(2*self.rho_grid[0])
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_x = {s_i.name: xs[p]
