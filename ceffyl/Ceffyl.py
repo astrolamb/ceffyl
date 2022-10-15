@@ -74,7 +74,6 @@ class signal():
                     param_names.extend([f'{p.name}_{ii}_{name}'
                                         for ii in range(p.size)])
 
-            self.N_psrs = len(selected_psrs)
             self.param_names = param_names
             self.N_params = len(param_names)
             self.params = params
@@ -229,6 +228,8 @@ class ceffyl():
             if s.selected_psrs is None:
                 s.selected_psrs = self.pulsar_list
 
+            self.N_psrs = len(s.selected_psrs)  # save number of psrs
+
             if not np.isin(s.selected_psrs, self.pulsar_list).all():
                 raise ValueError('Mismatch between density array pulsars and' +
                                  'the pulsars you selected')
@@ -360,7 +361,9 @@ class ceffyl():
 
         @return logpdf: total logpdf of proposed values given KDE density array
         """
-        rho = np.zeros((self.N_psrs, self.N_freqs))  # initalise empty array
+
+        # initalise array of rho values with lower prior boundary
+        rho = np.ones((self.N_psrs, self.N_freqs)) * 2 * 10**self.rho_grid[0]
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_x = {s_i.name: xs[p]
