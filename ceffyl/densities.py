@@ -299,8 +299,8 @@ class DE_factory:
             f.write(f'Bandwidth choice: {bandwidth}\n')
             f.write(f'Bandwidth values: {self.bws}\n')
             f.write(f'log10rho grid: {self.rho_grid}\n')
-            f.write(f'Thin chain for KDE? {self.kde_thin_chain}\n')
-            f.write(f'Thin chain for bandwidth? {self.bw_thin_chain}\n')
+            f.write(f'Thin chain for KDE? {kde_thin_chain}\n')
+            f.write(f'Thin chain for bandwidth? {bw_thin_chain}\n')
             f.write(f'Bootstrap? {bootstrap}\n')
             f.write(f'Number of bootstrapped samples: {Nbootstrap}\n')
 
