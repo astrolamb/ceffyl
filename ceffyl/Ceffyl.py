@@ -235,9 +235,9 @@ class ceffyl():
                                  'the pulsars you selected')
 
             else:  # save idx of (subset of) psrs within larger list
-                #if s.CP:
+                # if s.CP:
                 #    s.psr_idx = np.arange(self.N_psrs)
-                #else:
+                # else:
                 s.psr_idx = np.array([list(self.pulsar_list).index(p)
                                       for p in s.selected_psrs])
 

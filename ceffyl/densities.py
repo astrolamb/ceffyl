@@ -7,6 +7,7 @@ from ceffyl.bw import bandwidths as bw
 import acor
 import la_forge.core as co
 import glob
+import time
 
 try:
     import kalepy as kale
@@ -192,9 +193,9 @@ class DE_factory:
     def setup_densities(self, rho_grid=np.linspace(-15.5, 0, 1551),
                         log_infinitessimal=-36., save_density=True,
                         outdir='chain/', kde_func='FFTKDE', bandwidth=bw.sj,
-                        bw_thin_chain=False, kde_thin_chain=False,
-                        change_nans=True, bw_kwargs={}, kde_kwargs={},
-                        bootstrap=False, Nbootstrap=None):
+                        kernel='epanechnikov', bw_thin_chain=False,
+                        kde_thin_chain=False, change_nans=True, bw_kwargs={},
+                        kde_kwargs={}, bootstrap=False, Nbootstrap=None):
         """
         A method to setup densitites for all chains and save them as a .npy
         file
@@ -246,7 +247,7 @@ class DE_factory:
                 if bootstrap:  # bootstrap data
                     if Nbootstrap is None:
                         Nbootstrap = data.shape[0]
-                    
+
                     bootmask = np.random.randint(0, high=Nbootstrap,
                                                  size=Nbootstrap)
                     data = data[bootmask]
@@ -264,8 +265,8 @@ class DE_factory:
                 bws.append(bw)  # save bandwidths
 
                 # calculate pdf along grid points and save
-                pdfs.append(self.density(data, bw, rho_grid=rho_grid,
-                                         kde_func=kde_func,
+                pdfs.append(self.density(data, bw, kernel=kernel,
+                                         rho_grid=rho_grid, kde_func=kde_func,
                                          thin_chain=kde_thin_chain,
                                          **kde_kwargs))
 
@@ -288,6 +289,20 @@ class DE_factory:
         # save density and log10rho array as .npy file
         if save_density:
             self._save_densities(outdir=outdir)
+
+        # save log with information
+        with open(outdir+'/log.txt', 'w') as f:
+            f.write(f'Date created:{time.localtime}')
+            f.write(f'la-forge cores: {self.corelist}\n')
+            f.write(f'KDE function: {self.kde_func}\n')
+            f.write(f'KDE kernel choice: {kernel}')
+            f.write(f'Bandwidth choice: {bandwidth}\n')
+            f.write(f'Bandwidth values: {self.bws}\n')
+            f.write(f'log10rho grid: {self.rho_grid}\n')
+            f.write(f'Thin chain for KDE? {self.kde_thin_chain}\n')
+            f.write(f'Thin chain for bandwidth? {self.bw_thin_chain}\n')
+            f.write(f'Bootstrap? {bootstrap}\n')
+            f.write(f'Number of bootstrapped samples: {Nbootstrap}\n')
 
         return pdfs
 
@@ -371,7 +386,7 @@ class DE_factory:
         for psr in self.pulsar_names:
             print(f'Creating density array for psr {ct}')
             for rho in self.rho_labels:
-
+                print(f'Creating densities for {rho}', end='', flush=True)
                 data = self.chains[psr][rho]  # data to represent
 
                 # computing burn length
