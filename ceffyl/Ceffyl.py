@@ -296,6 +296,10 @@ class ceffyl():
                 id += s.N_params
                 s.pmap = pmap
 
+        # create list of idx grids
+        for s in signals:
+            s.ixgrid = np.ix_(s.psr_idx, s.freq_idxs)
+
         # save array of signals
         self.signals = signals
 
@@ -401,9 +405,8 @@ class ceffyl():
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_xs = {s_i.name: xs[p]
                          for p, s_i in zip(s.pmap, s.psd_priors)}
-            rho[s.psr_idx][:, s.freq_idxs] += \
-                s.get_rho(self.reshaped_freqs[s.freq_idxs], Tspan=self.Tspan,
-                          mapped_xs=mapped_xs)
+            rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
+                                       Tspan=self.Tspan, mapped_xs=mapped_xs)
 
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
 
