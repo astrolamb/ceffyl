@@ -139,7 +139,7 @@ class signal():
         return np.array([p.get_logpdf(x)  # require 2 x sum of list of arrays
                          for p, x in zip(self.psd_priors, xs)]).sum().sum()
 
-    def get_rho(self, freqs, mapped_xs):
+    def get_rho(self, freqs, mapped_xs, Tspan):
         """
         A method to calculate PSD of proposed values from given psd function
 
@@ -153,7 +153,7 @@ class signal():
 
         @return rho: array of PSDs in shape (N_p x N_f)
         """
-        rho = self.psd(freqs, **mapped_xs, **self.const_params,
+        rho = self.psd(freqs, Tspan, **mapped_xs, **self.const_params,
                        **self.psd_kwargs).T
 
         return rho
@@ -174,7 +174,7 @@ class ceffyl():
     A class to fit signals to free spectra to derive the signals' spectral
     characteristics
     """
-    def __init__(self, datadir, pulsar_list=None, hist=False):
+    def __init__(self, datadir, pulsar_list=None, hist=False, Tspan=None):
         """
         Initialise the class and return a ceffyl object
 
@@ -185,6 +185,8 @@ class ceffyl():
         @params pulsar_list: list of pulsars to search over
         @param hist: Flag to state that you're using histograms instead of
                      KDEs
+        @param Tspan: Manually enter a Tspan. Default = Tspan of preprocessed
+                      data. I recommend keeping it to default
 
         @param ceffyl: return a ceffyl object
         """
@@ -200,7 +202,10 @@ class ceffyl():
         self.freqs = np.load(f'{datadir}/freqs.npy')
         self.N_freqs = self.freqs.size
         self.reshaped_freqs = self.freqs.reshape((1, self.N_freqs)).T
-        self.Tspan = self.freqs[0]
+        if Tspan is None:
+            self.Tspan = 1/self.freqs[0]
+        else:
+            self.Tspan = Tspan
         self.rho_labels = np.loadtxt(f'{datadir}/log10rholabels.txt',
                                      dtype=np.unicode_, ndmin=1)
         if hist:
@@ -394,10 +399,11 @@ class ceffyl():
         rho = np.ones((self.N_psrs, self.N_freqs)) * 10**(2*self.rho_grid[0])
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            mapped_x = {s_i.name: xs[p]
-                        for p, s_i in zip(s.pmap, s.psd_priors)}
+            mapped_xs = {s_i.name: xs[p]
+                         for p, s_i in zip(s.pmap, s.psd_priors)}
             rho[s.psr_idx][:, s.freq_idxs] += \
-                s.get_rho(self.reshaped_freqs[s.freq_idxs], mapped_x)
+                s.get_rho(self.reshaped_freqs[s.freq_idxs], Tspan=self.Tspan,
+                          mapped_xs=mapped_xs)
 
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
 
