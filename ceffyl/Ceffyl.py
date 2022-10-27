@@ -397,8 +397,8 @@ class ceffyl():
             mapped_x = {s_i.name: xs[p]
                         for p, s_i in zip(s.pmap, s.psd_priors)}
             rho[s.psr_idx,
-                s.freq_idxs] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
-                                          mapped_x)
+                [s.freq_idxs]] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
+                                            mapped_x)
 
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
 
