@@ -2,6 +2,8 @@
 import numpy as np
 from enterprise.signals.parameter import Uniform
 from ceffyl import models
+import os
+import webbrowser
 
 """
 Classes to create noise signals and a parallel tempered PTMCMCSampler object
@@ -15,8 +17,9 @@ class signal():
     These signals can be a common process (GW) or individual to each pulsar
     (intrinsic red noise)
     """
-    def __init__(self, N_freqs, selected_psrs=None, psd=models.powerlaw,
-                 params=[Uniform(-18, -12)('log10_A'), Uniform(0, 7)('gamma')],
+    def __init__(self, N_freqs=None, freq_idxs=None, selected_psrs=None,
+                 psd=models.powerlaw, params=[Uniform(-18, -12)('log10_A'),
+                                              Uniform(0, 7)('gamma')],
                  const_params={}, common_process=True, name='gw',
                  psd_kwargs={}):
         """
@@ -25,7 +28,14 @@ class signal():
 
         //Inputs//
         @param N_freqs: Number of frequencies for this signal. Expected to be
-                        equal or less than total PTA frequencies to be used
+                        equal or less than the number of frequencies used to
+                        preprocess data. This fits the first N_freqs
+                        frequencies to the data
+
+        @param freq_idxs: an array of indices of frequencies to fit to data.
+                          This is an alternative to N_freqs. e.g. if you'd like
+                          to fit data to every second frequency, input
+                          freq_idxs=[0,2,4,6,...]
 
         @param selected_psrs: A list of names of the pulsars under this signal.
                               Expected to be a subset of pulsars within density
@@ -53,7 +63,18 @@ class signal():
         """
 
         # saving class information as properties
-        self.N_freqs = N_freqs
+        if N_freqs is not None or freq_idxs is not None:
+            if N_freqs is not None:
+                self.N_freqs = N_freqs
+                self.freq_idxs = np.arange(N_freqs)
+            else:
+                self.freq_idxs = np.array(freq_idxs)
+                self.N_freqs = len(freq_idxs)
+
+        else:
+            print("Please give me some frequencies to search over...")
+            return
+
         self.psd = psd
         self.psd_priors = params
         self.N_priors = len(params)
@@ -167,6 +188,13 @@ class ceffyl():
 
         @param ceffyl: return a ceffyl object
         """
+
+        # checking if datadir exists
+        # returns an error if not
+        if not os.path.isdir(datadir):
+            print("oops! not a directory!")
+            webbrowser.open('https://youtu.be/iVSrEn561Bc?t=17')
+            raise FileNotFoundError
 
         # saving properties
         self.freqs = np.load(f'{datadir}/freqs.npy')
@@ -369,13 +397,12 @@ class ceffyl():
             mapped_x = {s_i.name: xs[p]
                         for p, s_i in zip(s.pmap, s.psd_priors)}
             rho[s.psr_idx,
-                :s.N_freqs] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
-                                         mapped_x)
+                [s.freq_idxs]] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
+                                            mapped_x)
 
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
 
         # search for location of logrho values within grid
-        # BUG?: what happens if logrho < rho_grid?
         idx = np.searchsorted(self.binedges, logrho) - 1
 
         logpdf = self.density[self._I, self._J, idx]
