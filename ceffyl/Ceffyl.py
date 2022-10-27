@@ -396,9 +396,8 @@ class ceffyl():
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_x = {s_i.name: xs[p]
                         for p, s_i in zip(s.pmap, s.psd_priors)}
-            rho[s.psr_idx,
-                [s.freq_idxs]] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
-                                            mapped_x)
+            rho[s.psr_idx][:, s.freq_idxs] += \
+                s.get_rho(self.reshaped_freqs[s.freq_idxs], mapped_x)
 
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
 
