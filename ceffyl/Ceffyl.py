@@ -63,7 +63,7 @@ class signal():
         """
 
         # saving class information as properties
-        if N_freqs is not None and freq_idxs is not None:
+        if N_freqs is not None or freq_idxs is not None:
             if N_freqs is not None:
                 self.N_freqs = N_freqs
                 self.freq_idxs = np.arange(N_freqs)
