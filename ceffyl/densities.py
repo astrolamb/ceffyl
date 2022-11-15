@@ -290,7 +290,7 @@ class DE_factory:
         if save_density:
             self._save_densities(outdir=outdir)
 
-        # save log with information
+        # save log with information
         with open(outdir+'/log.txt', 'w') as f:
             f.write(f'Date created:{time.localtime}')
             f.write(f'la-forge cores: {self.corelist}\n')
