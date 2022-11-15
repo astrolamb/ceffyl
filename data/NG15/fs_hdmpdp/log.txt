@@ -1,0 +1,14 @@
+Date created:<built-in function localtime>la-forge cores: ['/data/taylor_group/william_lamb/analyses/NANOGrav/NG15_v1p1/freespec/model_mpdphd_noBE_30f/chain.core']
+KDE function: FFTKDE
+KDE kernel choice: epanechnikovBandwidth choice: <function sj at 0x2b0834e96430>
+Bandwidth values: [0.01895661 0.00445878 0.00800923 0.01114346 0.026118   0.05326512
+ 0.04511053 0.01220786 0.05882243 0.05538025 0.05431271 0.04691377
+ 0.05842248 0.06161628 0.05782395 0.07777954 0.04784212 0.03508862
+ 0.04655824 0.04327694 0.0564178  0.05817439 0.05730205 0.04604786
+ 0.02774138 0.02807574 0.0609279  0.06597706 0.05945691 0.04902942]
+log10rho grid: [-15.5        -15.49854985 -15.49709971 ...  -1.00290029  -1.00145015
+  -1.        ]
+Thin chain for KDE? False
+Thin chain for bandwidth? False
+Bootstrap? False
+Number of bootstrapped samples: None
