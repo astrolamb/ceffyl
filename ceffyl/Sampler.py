@@ -240,7 +240,7 @@ class JumpProposal(object):
 
     def draw_from_prior(self, x, iter, beta):
         """
-        Draw values from prior
+        Draw values from prior for jump
 
         @param x: array of proposed parameter values
         @param iter: iteration of sampler
@@ -254,7 +254,7 @@ class JumpProposal(object):
         lqxy = 0
 
         # randomly choose parameter
-        pidx = np.random.randint(0, len(x))
+        pidx = np.random.randint(0, len(self.params))
 
         # sample this parameter
         p = self.params[pidx]
@@ -309,13 +309,26 @@ class JumpProposal(object):
         lqxy = 0
 
         # randomly choose parameter
-        p_name = np.random.choice(self.gw_names)
-        pidx = self.param_names.index(p_name)
-        p = self.params[pidx]
+        #p_name = np.random.choice(self.gw_names)
+        #pidx = self.param_names.index(p_name)
+        #p = self.params[pidx]
+
+        p = np.random.choice(self.params)
+        pidx = self.params.index(p)
 
         # sample this parameter
-        q[pidx] = np.random.uniform(p.prior._defaults['pmin'],
-                                    p.prior._defaults['pmax'])
+        rand = p.sample()
+
+        # change just one param
+        if type(rand) is np.ndarray:
+            subparams = [pn for pn in self.gw_names if p.name in pn]
+            psubp = np.random.choice(subparams)
+            psubidx = subparams.index(psubp)
+            pidx = self.param_names.index(psubp)
+            rand = rand[psubidx]
+
+        # sample this parameter
+        q[pidx] = rand
 
         # forward-backward jump probability
         lqxy = p.get_logpdf(x[pidx] - q[pidx])
