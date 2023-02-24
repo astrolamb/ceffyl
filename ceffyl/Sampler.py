@@ -240,7 +240,7 @@ class JumpProposal(object):
 
     def draw_from_prior(self, x, iter, beta):
         """
-        Draw values from prior
+        Draw values from prior for jump
 
         @param x: array of proposed parameter values
         @param iter: iteration of sampler
