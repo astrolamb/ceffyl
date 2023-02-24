@@ -442,6 +442,9 @@ def setup_sampler(ceffyl, outdir, logL, logp, resume=True, jump=True,
 
             if s.CP:  # visit GW signals x5 more often
                 [groups.extend(s.pmap) for ii in range(5)]
+            else:  # group irn by psr - assumes irn added first
+                groups.extend(np.arange(s.N_params).reshape((s.N_psrs,
+                                                             s.N_priors)))
 
     # sampler
     sampler = ptmcmc(ceffyl.ndim, logL, logp, cov,
