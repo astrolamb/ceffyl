@@ -413,9 +413,11 @@ class ceffyl():
         # search for location of logrho values within grid
         idx = np.searchsorted(self.binedges, logrho) - 1
 
-        logpdf = self.density[self._I, self._J, idx]
-
-        return np.sum(logpdf)
+        if (idx >= self.rho_grid.shape[0]).any():
+            return -np.inf
+        else:
+            logpdf = self.density[self._I, self._J, idx]
+            return np.sum(logpdf)
 
     def hist_ln_likelihood(self, xs):
         """
