@@ -292,10 +292,10 @@ class DE_factory:
 
         # save log with information
         with open(outdir+'/log.txt', 'w') as f:
-            f.write(f'Date created:{time.localtime}')
+            f.write(f'Date created:{time.localtime()}\n')
             f.write(f'la-forge cores: {self.corelist}\n')
             f.write(f'KDE function: {self.kde_func}\n')
-            f.write(f'KDE kernel choice: {kernel}')
+            f.write(f'KDE kernel choice: {kernel}\n')
             f.write(f'Bandwidth choice: {bandwidth}\n')
             f.write(f'Bandwidth values: {self.bws}\n')
             f.write(f'log10rho grid: {self.rho_grid}\n')

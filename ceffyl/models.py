@@ -113,6 +113,13 @@ def broken_powerlaw(f, Tspan, log10_A=-15, gamma=5, delta=0.1, log10_fb=-9,
            * (1+(f/10**log10_fb)**(1/kappa)) ** (kappa * (gamma - delta) / 2))
     return hcf ** 2 / (12*np.pi**2 * f**3) / Tspan
 
+def free_spectrum(f, Tspan, log10_rho):
+    """
+    Free spectral model. PSD  amplitude at each frequency is a free parameter.
+    Model is parameterized by S(f_i) = \rho_i^2 * T, where \rho_i is the free
+    parameter and T is the observation length
+    """
+    return 10 ** (2*log10_rho)
 
 def powerlaw_genmodes(f, Tspan, log10_A=-16, gamma=5, wgts=None):
     if wgts is not None:
@@ -123,5 +130,5 @@ def powerlaw_genmodes(f, Tspan, log10_A=-16, gamma=5, wgts=None):
             * const.fyr ** (gamma - 3) * f ** (-gamma) * df)
 
 
-def infinitepower(f):
+def infinitepower(f, Tspan):
     return np.full_like(f, 1e40, dtype="d")

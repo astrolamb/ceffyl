@@ -256,6 +256,9 @@ class ceffyl():
         if not isinstance(signals, list):
             raise TypeError("Please supply of signals as a list")
 
+        # set number of freqs to max number of freqs of signals
+        #self.N_freqs = max([s.N_freqs for s in signals])
+
         # check if pulsars in signals are in density array
         for s in signals:
             if s.selected_psrs is None:
@@ -268,9 +271,6 @@ class ceffyl():
                                  'the pulsars you selected')
 
             else:  # save idx of (subset of) psrs within larger list
-                # if s.CP:
-                #    s.psr_idx = np.arange(self.N_psrs)
-                # else:
                 s.psr_idx = np.array([list(self.pulsar_list).index(p)
                                       for p in s.selected_psrs])
 
@@ -350,7 +350,7 @@ class ceffyl():
         it transforms the N-dimensional unit cube u to our prior range of
         interest
 
-        NOTE: assumes uniform priors. Generalised function to be developed
+        NOTE: assumes uniform priors
 
         @param u: N-dimensional unit cube
         @return x: transformed prior
@@ -419,8 +419,9 @@ class ceffyl():
             logpdf = self.density[self._I, self._J, idx]
             return np.sum(logpdf)
 
+    """
     def hist_ln_likelihood(self, xs):
-        """
+        #
         log likelihood function for PTMCMC to calculate logpdf of
         proposed values given histogram density arrays. This isn't optimised
         for speed. It is best for PTA freespec only
@@ -428,7 +429,7 @@ class ceffyl():
         @param xs: proposed value array
 
         @return logpdf: total logpdf of proposed values given KDE density array
-        """
+        #
         rho = np.zeros((self.N_psrs, self.N_freqs))  # initalise empty array
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
@@ -449,6 +450,7 @@ class ceffyl():
                 logpdf += self.density[ii][jj][idx]
 
         return logpdf
+    """
 
     def initial_samples(self):
         """
