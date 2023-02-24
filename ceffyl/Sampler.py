@@ -254,7 +254,7 @@ class JumpProposal(object):
         lqxy = 0
 
         # randomly choose parameter
-        pidx = np.random.randint(0, len(x))
+        pidx = np.random.randint(0, len(self.params))
 
         # sample this parameter
         p = self.params[pidx]
