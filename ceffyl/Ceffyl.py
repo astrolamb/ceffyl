@@ -125,7 +125,6 @@ class signal():
             self.reshape = (1, len(selected_psrs),
                             len(params))
             self.length = len(self.params)
-            self.psrparam_idxs = list(np.arange(self.N_priors))*self.N_psrs
 
     def get_logpdf(self, xs):
         """
