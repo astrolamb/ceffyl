@@ -253,12 +253,22 @@ class JumpProposal(object):
         q = x.copy()
         lqxy = 0
 
-        # randomly choose parameter
-        pidx = np.random.randint(0, len(self.params))
+        p = np.random.choice(self.params)
+        pidx = self.params.index(p)
 
         # sample this parameter
-        p = self.params[pidx]
-        q[pidx] = p.sample()
+        rand = p.sample()
+
+        # change just one param
+        if type(rand) is np.ndarray:
+            subparams = [pn for pn in self.param_names if p.name in pn]
+            psubp = np.random.choice(subparams)
+            psubidx = subparams.index(psubp)
+            pidx = self.param_names.index(psubp)
+            rand = rand[psubidx]
+
+        # sample this parameter
+        q[pidx] = rand
 
         # forward-backward jump probability
         lqxy = p.get_logpdf(x[pidx] - q[pidx])
@@ -293,7 +303,7 @@ class JumpProposal(object):
 
         return q, float(lqxy)
 
-    def draw_from_gwb_loguni_dist(self, x, iter, beta):
+    def draw_from_gwb_priors(self, x, iter, beta):
         """
         Prior draw from log uniform GWB distribution
 
@@ -321,7 +331,8 @@ class JumpProposal(object):
 
         # change just one param
         if type(rand) is np.ndarray:
-            subparams = [pn for pn in self.gw_names if p.name in pn]
+            subparams = [pn for pn in self.param_names if p.name in pn
+                         and 'gw' in pn]
             psubp = np.random.choice(subparams)
             psubidx = subparams.index(psubp)
             pidx = self.param_names.index(psubp)
@@ -466,7 +477,7 @@ def setup_sampler(ceffyl, outdir, logL, logp, resume=True, jump=True,
         # GWB uniform distribution draw
         if gw_signal:
             print('Adding GWB uniform distribution draws...\n')
-            sampler.addProposalToCycle(jp.draw_from_gwb_loguni_dist, 10)
+            sampler.addProposalToCycle(jp.draw_from_gwb_priors, 10)
 
         # try adding empirical proposals
         if empirical_distr is not None:
