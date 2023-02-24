@@ -472,7 +472,7 @@ def setup_sampler(ceffyl, outdir, logL, logp, resume=True, jump=True,
         # Red noise prior draw
         if red_noise:
             print('Adding red noise prior draws...\n')
-            sampler.addProposalToCycle(jp.draw_from_red_prior, 10)
+            sampler.addProposalToCycle(jp.draw_from_red_prior, 50)
 
         # GWB uniform distribution draw
         if gw_signal:
