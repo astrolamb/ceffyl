@@ -1,7 +1,0 @@
-Date created:<built-in function localtime>la-forge cores: ['../data/sim0/fs10f_real_0.core']
-KDE function: FFTKDE
-KDE kernel choice: epanechnikovBandwidth choice: <function sj at 0x10b93c820>
-Bandwidth values: [0.00536148 0.01532656 0.03576047 0.00569928 0.03127203 0.02829822
- 0.02465069 0.03386524 0.02847719 0.032653  ]
-log10rho grid: [-12.2       -12.1989799 -12.1979598 ...  -2.0020402  -2.0010201
-  -2.       ]
