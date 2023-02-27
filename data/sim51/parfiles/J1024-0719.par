@@ -1,0 +1,33 @@
+PSR              J1024-0719
+LAMBDA   160.7343480544531  1     0.0000000127132
+BETA     -16.0447399346623  1     0.0000000543226
+PMLAMBDA          -14.4072  1              0.0228
+PMBETA            -57.8977  1              0.0871
+PX                  0.9976  1              0.2161
+POSEPOCH        56520.0000
+F0    193.7156863607219748  1  0.0000000000006179
+F1     -6.964117421722D-16  1  8.377498426891D-21
+F2     -4.041631323802D-27  1  4.263884180993D-28
+PEPOCH        56520.000000
+START            55118.587
+FINISH           57922.861
+DM                6.477743
+SOLARN0               0.00
+EPHEM               DE438
+ECL                 IERS2010
+CLK                 TT(BIPM2018)                    
+UNITS               TDB
+TIMEEPH             FB90
+T2CMETHOD           TEMPO
+CORRECT_TROPOSPHERE N
+PLANET_SHAPIRO      N
+DILATEFREQ          N
+NTOA                  9792
+TRES                  1.70
+TZRMJD  56520.68967049737427
+TZRFRQ             847.331
+TZRSITE                  GB
+MODE                     1
+NITS                     1
+INFO -f                              
+
