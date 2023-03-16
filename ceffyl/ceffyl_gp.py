@@ -35,7 +35,6 @@ class JumpProposal(object):
         # save information as class properties
         self.params = ceffylGP.params  # list of parameter objects
         self.param_names = ceffylGP.param_names  # list of parameter names
-        self.log10_rho = ceffylGP.log10_rho  # list of log10rho parameter names
         self.hyperparams = ceffylGP.hypervar  # list of gp param names
         self.hypernames = [h.name for h in ceffylGP.hypervar]
         self.empirical_distr = empirical_distr
@@ -340,24 +339,24 @@ class ceffylGP():
         # create ceffyl object w/ Nfreq free spec
         ceffyl_pta = Ceffyl.ceffyl(datadir)
         
-        log10_rho = parameter.Uniform(*log10_rho_priors,  # log10rho parameter
+        # log10rho parameter to initialise ceffyl object
+        log10_rho = parameter.Uniform(*log10_rho_priors, 
                                       size=Nfreqs)('log10_rho')
-        # set up free spec to # sample over
         gw = Ceffyl.signal(psd=models.free_spectrum, N_freqs=Nfreqs,
                           params=[log10_rho], freq_idxs=freq_idxs)
         ceffyl_pta = ceffyl_pta.add_signals([gw])
         self.ceffyl_pta = ceffyl_pta  # save ceffyl object
-        self.log10_rho = log10_rho
         
         self.Tspan = 1/ceffyl_pta.freqs[0]  # PTA frequencies being searched
-        self.freqs = ceffyl_pta.freqs[:Nfreqs]
+        self.freqs = ceffyl_pta.freqs[:Nfreqs]  # save frequencies
         self.rho_grid = np.repeat([self.ceffyl_pta.rho_grid], repeats=Nfreqs,
-                                  axis=0).T
+                                  axis=0).T  # save freespec probability grid
 
         # saving locations of constant hyperparams
         const_idx = np.where(np.array([hasattr(h, 'sample')
                                        for h in hyperparams])==False)[0]
-        const_values = np.array([h.value for h in np.array(hyperparams)[const_idx]])
+        const_values = np.array([h.value for h
+                                 in np.array(hyperparams)[const_idx]])
         self.const_idx, self.const_values = const_idx, const_values
         
         # locations of variable hyperparams
@@ -413,9 +412,9 @@ class ceffylGP():
 
         drho = self.ceffyl_pta.rho_grid[1] - self.ceffyl_pta.rho_grid[0]
         ln_integrand = ln_freespec + ln_gaussian + np.log(drho)
-        ln_like = logsumexp(ln_integrand)
+        ln_like = logsumexp(ln_integrand)  # need to vectorise for pulsars
 
-        return ln_like.sum()  # return ln gaussian
+        return ln_like  # return ln gaussian
     
     def ln_prior(self, x0):
         """
@@ -590,10 +589,12 @@ if __name__ == '__main__':
     import la_forge.core as co
     import la_forge.diagnostics as dg
     chain = co.Core(outdir)
-    #dg.plot_chains(chain, hist=False, save='./test/trace.png')
+    #dg.plot_chains(chain, hist=False, save='./trace.png', figsize=(4,10))
 
     from chainconsumer.chainconsumer import ChainConsumer
     c = ChainConsumer()
-    c.add_chain(chain(chain.params[:-4]))
+    c.add_chain(chain(chain.params[:-4]),
+                parameters=chain.params[:-4])
+    c.configure(summary=True, smooth=False)
     fig = c.plotter.plot()
     fig.savefig('./testfig.png')
