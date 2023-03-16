@@ -320,8 +320,8 @@ class ceffylGP():
         self.freqs = ceffyl_pta.freqs[:Nfreqs]  # save frequencies
 
         # save rho grid
-        rho_mask = (self.ceffyl_pta.rho_grid > log10_rho_priors[0] and 
-                    self.ceffyl_pta.rho_grid < log10_rho_priors[1])
+        #rho_mask = (self.ceffyl_pta.rho_grid > log10_rho_priors[0] and 
+        #            self.ceffyl_pta.rho_grid < log10_rho_priors[1])
         rho_grid = self.ceffyl_pta.rho_grid
         self.rho_grid = np.repeat([rho_grid], repeats=Nfreqs,
                                   axis=0) # save freespec probability grid
