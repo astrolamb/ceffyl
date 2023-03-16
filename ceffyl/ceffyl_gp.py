@@ -375,7 +375,7 @@ class ceffylGP():
 
         # turn predicted psd to log10rho (and propogate uncertainty!)
         psd_sigma =  h2cf_sigma/(12*np.pi**2 * self.freqs**3 * self.Tspan)
-        log10_sigma = 0.5*psd_sigma/(psd*np.log(10))[:,None]
+        log10_sigma = (0.5*psd_sigma/(psd*np.log(10)))[:,None]
 
         # compare GP predicted log10rho to sampled log10rho using Gaussian
         ln_gaussian = -0.5 * (((self.rho_grid -
