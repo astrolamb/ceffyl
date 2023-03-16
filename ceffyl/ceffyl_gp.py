@@ -277,39 +277,6 @@ class JumpProposal(object):
                 param.get_logpdf(q[self.pmap[str(param)]]))
 
         return q, float(lqxy)
-    
-    def draw_from_empirical_distr(self, x, iter, beta):
-        """
-        draw samples from an empirical distribution
-        The function signature is specific to PTMCMCSampler.
-        """
-        q = x.copy()  # copy proposed value array
-        lqxy = 0  # set jump probability to zero
-
-        # randomly choose one of the empirical distributions
-        distr_idx = np.random.randint(0, len(self.empirical_distr))
-        dist = self.empirical_distr[distr_idx]
-
-        if self.empirical_distr[distr_idx].ndim == 1:  #if scalar parameter
-
-            idx = self.param_names.index(dist.param_name)
-            q[idx] = dist.draw()  # sample from distribution
-
-            # if x falls outside the emp distr support,
-            # pull from prior instead
-            if x[idx] < dist._edges[0] or x[idx] > dist._edges[-1]:
-                q, lqxy = self.draw_from_prior(x, iter, beta)
-            
-            else:  #  update sample
-                oldsample = x[self.param_names.index(dist.param_name)]
-                newsample = dist.draw()
-
-                lqxy = (dist.logprob(oldsample) - dist.logprob(newsample))
-
-                q[self.param_names.index(dist.param_name)] = newsample
-
-        return q, float(lqxy)
-
 
 ################################################################################
 class ceffylGP():
@@ -351,7 +318,12 @@ class ceffylGP():
         
         self.Tspan = 1/ceffyl_pta.freqs[0]  # PTA frequencies being searched
         self.freqs = ceffyl_pta.freqs[:Nfreqs]  # save frequencies
-        self.rho_grid = np.repeat([self.ceffyl_pta.rho_grid], repeats=Nfreqs,
+
+        # save rho grid
+        rho_mask = (self.ceffyl_pta.rho_grid > log10_rho_priors[0] and 
+                    self.ceffyl_pta.rho_grid < log10_rho_priors[1])
+        rho_grid = self.ceffyl_pta.rho_grid
+        self.rho_grid = np.repeat([rho_grid], repeats=Nfreqs,
                                   axis=0).T  # save freespec probability grid
 
         # saving locations of constant hyperparams
