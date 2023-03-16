@@ -14,6 +14,7 @@ from enterprise_extensions.sampler import extend_emp_dists
 from ceffyl import Ceffyl, models
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
 from holodeck.gps import gp_utils
+from scipy.special import logsumexp
 ################################################################################
 class JumpProposal(object):
     """
@@ -34,7 +35,6 @@ class JumpProposal(object):
         # save information as class properties
         self.params = ceffylGP.params  # list of parameter objects
         self.param_names = ceffylGP.param_names  # list of parameter names
-        self.log10_rho = ceffylGP.log10_rho  # list of log10rho parameter names
         self.hyperparams = ceffylGP.hypervar  # list of gp param names
         self.hypernames = [h.name for h in ceffylGP.hypervar]
         self.empirical_distr = empirical_distr
@@ -339,22 +339,24 @@ class ceffylGP():
         # create ceffyl object w/ Nfreq free spec
         ceffyl_pta = Ceffyl.ceffyl(datadir)
         
-        log10_rho = parameter.Uniform(*log10_rho_priors,  # log10rho parameter
+        # log10rho parameter to initialise ceffyl object
+        log10_rho = parameter.Uniform(*log10_rho_priors, 
                                       size=Nfreqs)('log10_rho')
-        # set up free spec to # sample over
         gw = Ceffyl.signal(psd=models.free_spectrum, N_freqs=Nfreqs,
                           params=[log10_rho], freq_idxs=freq_idxs)
         ceffyl_pta = ceffyl_pta.add_signals([gw])
         self.ceffyl_pta = ceffyl_pta  # save ceffyl object
-        self.log10_rho = log10_rho
         
         self.Tspan = 1/ceffyl_pta.freqs[0]  # PTA frequencies being searched
-        self.freqs = ceffyl_pta.freqs[:Nfreqs]
+        self.freqs = ceffyl_pta.freqs[:Nfreqs]  # save frequencies
+        self.rho_grid = np.repeat([self.ceffyl_pta.rho_grid], repeats=Nfreqs,
+                                  axis=0).T  # save freespec probability grid
 
         # saving locations of constant hyperparams
         const_idx = np.where(np.array([hasattr(h, 'sample')
                                        for h in hyperparams])==False)[0]
-        const_values = np.array([h.value for h in np.array(hyperparams)[const_idx]])
+        const_values = np.array([h.value for h
+                                 in np.array(hyperparams)[const_idx]])
         self.const_idx, self.const_values = const_idx, const_values
         
         # locations of variable hyperparams
@@ -363,12 +365,13 @@ class ceffylGP():
         self.hypervar = np.array(hyperparams)[self.hypervar_idx]
 
         # saving params that can be sampled (i.e. no constant values)
-        self.params = [log10_rho] + list(self.hypervar)
+        self.params = list(self.hypervar)
+
+        self.ln_freespec = ceffyl_pta.density[0,:self.Nfreqs].T
         
         # saving parameter names
-        rho_labels = [f'log10_rho_{ii}' for ii in range(self.Nfreqs)]
         env_names = [p.name for p in self.hypervar]
-        self.param_names = rho_labels + env_names
+        self.param_names = env_names
         
         return
         
@@ -376,17 +379,15 @@ class ceffylGP():
         """
         likelihood function
         """
-        # separate relevent input variables
-        log10_rhos, eta = x0[:self.Nfreqs], x0[self.Nfreqs:]
-
         # ensure constant values are in the correct place!
         etac = np.zeros(len(self.hyperparams))  # empty array
-        etac[self.hypervar_idx] = eta
+        etac[self.hypervar_idx] = x0
         etac[self.const_idx] = self.const_values
         
         ## Predict GP
         _, log10h2cf, log10h2cf_sigma = gp_utils.hc_from_gp(self.gp_george,
                                                             self.gp, etac)
+        log10h2cf_sigma = log10h2cf_sigma[:,1]
 
         ## Convert Zero-Mean to Characteristic Strain Squared
         h2cf = 10**(log10h2cf)
@@ -394,7 +395,8 @@ class ceffylGP():
                                                           # uncertainty
 
         # turn predicted h2cf to psd (and propogate uncertainty!)
-        psd =  h2cf/(12*np.pi**2 * self.freqs**3 * self.Tspan)
+        psd =  h2cf/(12*np.pi**2 *
+                     self.freqs**3 * self.Tspan)
         log10_rho_gp = 0.5*np.log10(psd)
 
         # turn predicted psd to log10rho (and propogate uncertainty!)
@@ -402,31 +404,27 @@ class ceffylGP():
         log10_sigma = 0.5*psd_sigma/(psd*np.log(10))
 
         # compare GP predicted log10rho to sampled log10rho using Gaussian
-        gaussian = (((log10_rho_gp - log10_rhos)/log10_sigma)**2 +
-                      np.log(2*np.pi*log10_sigma**2))
+        ln_gaussian = -0.5 * (((self.rho_grid -
+                                log10_rho_gp)/log10_sigma)**2 +
+                              np.log(2*np.pi*log10_sigma**2))
+        
+        ln_freespec = self.ln_freespec
 
-        return -0.5 * gaussian.sum()  # return ln gaussian
+        drho = self.ceffyl_pta.rho_grid[1] - self.ceffyl_pta.rho_grid[0]
+        ln_integrand = ln_freespec + ln_gaussian + np.log(drho)
+        ln_like = logsumexp(ln_integrand)  # need to vectorise for pulsars
+
+        return ln_like  # return ln gaussian
     
     def ln_prior(self, x0):
         """
         function to calc total ln_prior
         """
         # separate parameters
-        log10_rhos, eta = x0[:self.Nfreqs], x0[self.Nfreqs:]
+        lnprior_eta = np.array([h.get_logpdf(x) for
+                                h, x in zip(self.hyperparams, x0)]).sum()
         
-        # compute prior on *uniform* log10_rho
-        lnprior_rho = self.ceffyl_pta.ln_prior(log10_rhos)
-        if np.isinf(lnprior_rho).any():  # if outside of range... -inf
-            return -np.inf
-        
-        else:  # log10prior is based on likelihood from PTA free spectrum
-            lnprior_rho = self.ceffyl_pta.ln_likelihood(log10_rhos)  #wgt'd prior
-        
-            # prior probability of hyperparameter
-            lnprior_eta = np.array([h.get_logpdf(x) for
-                                    h, x in zip(self.hyperparams, eta)]).sum()
-        
-            return lnprior_rho + lnprior_eta
+        return lnprior_eta #    + lnprior_rho
     
     def initial_samples(self):
         """
@@ -435,7 +433,7 @@ class ceffylGP():
         log10_rhos = self.log10_rho.sample()
         etas = [h.sample() for h in self.hypervar]
         
-        return np.hstack([log10_rhos, etas])
+        return np.hstack(etas)
 
 
 ################################################################################
@@ -445,7 +443,7 @@ class ceffylGPSampler():
     """
     def __init__(self, trainedGPdir, spectradir, ceffyldir, hyperparams,
                  outdir, emp_dist_dir=None, resume=True, Nfreqs=None,
-                 freq_idxs=None, log10_rho_priors=[-10., -5.9]):
+                 freq_idxs=None, log10_rho_priors=[-10., -5.9], jump=True):
         """
         Initialise the class!
 
@@ -473,6 +471,13 @@ class ceffylGPSampler():
 
         # set up list of GP George objects
         gp = gp_utils.set_up_predictions(spectra, gp_george)
+
+        if Nfreqs is None:
+            gp_george = list(np.array(gp_george)[freq_idxs])
+            gp = list(np.array(gp)[freq_idxs])
+        else:
+            gp_george = gp_george[:Nfreqs]
+            gp = gp[:Nfreqs]
 
         # set up ceffylGP class
         ceffyl_gp = ceffylGP(ceffyldir, Nfreqs=Nfreqs, hyperparams=hyperparams,
@@ -506,28 +511,25 @@ class ceffylGPSampler():
             empirical_distr = None
 
         # add jump proposals for better sampling
-        jp = JumpProposal(ceffyl_gp, empirical_distr=empirical_distr)
-        sampler.addProposalToCycle(jp.draw_from_prior, 10)
-        sampler.addProposalToCycle(jp.draw_from_gw_rho_prior, 10)
-        sampler.addProposalToCycle(jp.draw_from_env_prior, 20)
+        if jump:
+            jp = JumpProposal(ceffyl_gp, empirical_distr=empirical_distr)
+            sampler.addProposalToCycle(jp.draw_from_prior, 10)
+            sampler.addProposalToCycle(jp.draw_from_env_prior, 20)
 
-        if empirical_distr is not None:
-            sampler.addProposalToCycle(jp.draw_from_empirical_distr, 20)
+            if np.any(['hard' in par for par in ceffyl_gp.param_names]):
+                sampler.addProposalToCycle(jp.draw_from_hard_prior, 10)
 
-        if np.any(['hard' in par for par in ceffyl_gp.param_names]):
-            sampler.addProposalToCycle(jp.draw_from_hard_prior, 10)
+            if np.any(['gsmf' in par for par in ceffyl_gp.param_names]):
+                sampler.addProposalToCycle(jp.draw_from_gsmf_prior, 10)
 
-        if np.any(['gsmf' in par for par in ceffyl_gp.param_names]):
-            sampler.addProposalToCycle(jp.draw_from_gsmf_prior, 10)
+            if np.any(['gpf' in par for par in ceffyl_gp.param_names]):
+                sampler.addProposalToCycle(jp.draw_from_gpf_prior, 10)
 
-        if np.any(['gpf' in par for par in ceffyl_gp.param_names]):
-            sampler.addProposalToCycle(jp.draw_from_gpf_prior, 10)
+            if np.any(['gmt' in par for par in ceffyl_gp.param_names]):
+                sampler.addProposalToCycle(jp.draw_from_gmt_prior, 10)
 
-        if np.any(['gmt' in par for par in ceffyl_gp.param_names]):
-            sampler.addProposalToCycle(jp.draw_from_gmt_prior, 10)
-
-        if np.any(['mmb' in par for par in ceffyl_gp.param_names]):
-            sampler.addProposalToCycle(jp.draw_from_mmb_prior, 10)
+            if np.any(['mmb' in par for par in ceffyl_gp.param_names]):
+                sampler.addProposalToCycle(jp.draw_from_mmb_prior, 10)
 
         np.savetxt(outdir+'/pars.txt', ceffyl_gp.param_names, fmt='%s')
 
@@ -542,15 +544,17 @@ if __name__ == '__main__':
     Let's test if this code works!
     """
     # paths to data
-    trainedGPdir = '../spec_libraries/big-circ-01_2023-02-09_01_n1000_s50_r100_f40/trained_gp_big-circ-01_2023-02-09_01_n1000_s50_r100_f40.pkl'
-    spectradir = '../spec_libraries/big-circ-01_2023-02-09_01_n1000_s50_r100_f40/sam_lib.hdf5'
-    ceffyldir = '../ceffyl_ng15_multiorf_hdonly'
-    emp_dist_dir = '../ceffyl_ng15_multiorf_hdonly/fs_emp_dist.pkl'
-    
-    # path to save MCMC chain
-    outdir = '/data/taylor_group/william_lamb/ng15_astro_interp/gpclasstest/'
-    #outdir = '../results/big_circ_ng15HD_5f_constplaw/'
+    trainedGPdir = '../../ng15yr_astro_interp/spec_libraries/circ-01_2023-02-23_01_n1000_s60_r100_f40/trained_gp_circ-01_2023-02-23_01_n1000_s60_r100_f40.pkl'
+    spectradir = '../../ng15yr_astro_interp/spec_libraries/circ-01_2023-02-23_01_n1000_s60_r100_f40/sam_lib.hdf5'
+    ceffyldir = '../../ng15yr_astro_interp/ceffyl_ng15_multiorf_hdonly'
+    emp_dist_dir = '../../ng15yr_astro_interp/ceffyl_ng15_multiorf_hdonly/fs_emp_dist.pkl'
 
+    # path to save MCMC chain
+    #outdir = './test/'
+    outdir = '../../ng15yr_astro_interp/spec_libraries/circ-01_2023-02-23_01_n1000_s60_r100_f40/test_5f/'
+
+    import sys
+    sys.path.append('../../ng15yr_astro_interp/')
     with open(trainedGPdir, 'rb') as f:
         gp = pickle.load(f)  # open directory of trained GPs
     
@@ -559,10 +563,14 @@ if __name__ == '__main__':
     hyperparams = []
     for hp in hp_names:
         h = parameter.Uniform(gp[0].par_dict[hp]['min'],
+<<<<<<< HEAD
                               gp[0].par_dict[hp]['max'])(hp)
+=======
+                                gp[0].par_dict[hp]['max'])(hp)
+>>>>>>> d3702b12e8c820e34fff43ed7db4e7a10f225b90
         hyperparams.append(h)
 
-    test_constant = True  # test if parameter.constant function works
+    test_constant = False  # test if parameter.constant function works
     if test_constant:
         hyperparams[-1] = parameter.Constant(1.5)
 
@@ -570,14 +578,27 @@ if __name__ == '__main__':
 
     # set up sampler!
     sampler = ceffylGPSampler(trainedGPdir=trainedGPdir, spectradir=spectradir,
-                              ceffyldir=ceffyldir, hyperparams=hyperparams,
-                              Nfreqs=Nfreqs, outdir=outdir,
-                              emp_dist_dir=emp_dist_dir)
+                                ceffyldir=ceffyldir, hyperparams=hyperparams,
+                                Nfreqs=Nfreqs, outdir=outdir,
+                                emp_dist_dir=emp_dist_dir, jump=True)
     
     print('Here are your parameters...\n')
     print(sampler.ceffyl_gp.param_names)
     
     x0 = sampler.ceffyl_gp.initial_samples()
-    N = int(5e7)
+    N = int(1e7)
 
-    sampler.sampler.sample(x0, N)
+    #sampler.sampler.sample(x0, N)
+
+    import la_forge.core as co
+    import la_forge.diagnostics as dg
+    chain = co.Core(outdir)
+    #dg.plot_chains(chain, hist=False, save='./trace.png', figsize=(4,10))
+
+    from chainconsumer.chainconsumer import ChainConsumer
+    c = ChainConsumer()
+    c.add_chain(chain(chain.params[:-4]),
+                parameters=chain.params[:-4])
+    c.configure(summary=True, smooth=False)
+    fig = c.plotter.plot()
+    fig.savefig('./testfig.png')
