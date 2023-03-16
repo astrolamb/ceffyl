@@ -563,11 +563,7 @@ if __name__ == '__main__':
     hyperparams = []
     for hp in hp_names:
         h = parameter.Uniform(gp[0].par_dict[hp]['min'],
-<<<<<<< HEAD
                               gp[0].par_dict[hp]['max'])(hp)
-=======
-                                gp[0].par_dict[hp]['max'])(hp)
->>>>>>> d3702b12e8c820e34fff43ed7db4e7a10f225b90
         hyperparams.append(h)
 
     test_constant = False  # test if parameter.constant function works
