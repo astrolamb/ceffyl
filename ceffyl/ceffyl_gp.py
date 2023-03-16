@@ -324,7 +324,7 @@ class ceffylGP():
                     self.ceffyl_pta.rho_grid < log10_rho_priors[1])
         rho_grid = self.ceffyl_pta.rho_grid
         self.rho_grid = np.repeat([rho_grid], repeats=Nfreqs,
-                                  axis=0).T  # save freespec probability grid
+                                  axis=0) # save freespec probability grid
 
         # saving locations of constant hyperparams
         const_idx = np.where(np.array([hasattr(h, 'sample')
@@ -341,7 +341,7 @@ class ceffylGP():
         # saving params that can be sampled (i.e. no constant values)
         self.params = list(self.hypervar)
 
-        self.ln_freespec = ceffyl_pta.density[0,:self.Nfreqs].T
+        self.ln_freespec = ceffyl_pta.density[0,:self.Nfreqs]
         
         # saving parameter names
         env_names = [p.name for p in self.hypervar]
