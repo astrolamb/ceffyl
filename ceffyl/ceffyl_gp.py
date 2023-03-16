@@ -488,10 +488,7 @@ class ceffylGPSampler():
         self.ceffyl_gp = ceffyl_gp
 
         # parameter groupings for better sampling
-        groups = [np.arange(len(ceffyl_gp.param_names)),
-                  list(np.arange(len(ceffyl_gp.freqs))),
-                  list(np.arange(len(ceffyl_gp.freqs),
-                                 len(ceffyl_gp.param_names)))]
+        groups = [np.arange(len(ceffyl_gp.param_names))]
         
         for label in ['hard', 'gsmf', 'gpf', 'gmt', 'mmb']:
             if np.any([label in par for par in ceffyl_gp.param_names]):
