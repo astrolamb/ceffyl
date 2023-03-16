@@ -379,7 +379,7 @@ class ceffylGP():
 
         # compare GP predicted log10rho to sampled log10rho using Gaussian
         ln_gaussian = -0.5 * (((self.rho_grid -
-                                log10_rho_gp)/log10_sigma)**2 +
+                                log10_rho_gp[:,None])/log10_sigma)**2 +
                               np.log(2*np.pi*log10_sigma**2))
         
         ln_freespec = self.ln_freespec
