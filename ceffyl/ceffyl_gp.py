@@ -97,11 +97,12 @@ class JumpProposal(object):
 
         return q, float(lqxy)
 
+    """
     def draw_from_gw_rho_prior(self, x, iter, beta):
-        """
+        #
         draw samples from a free spectrum prior
         The function signature is specific to PTMCMCSampler.
-        """
+        #
         q = x.copy()  # copy proposed value array
         lqxy = 0  # set jump probability to zero
         param = self.log10_rho  # free spectrum parameter
@@ -118,6 +119,7 @@ class JumpProposal(object):
                 param.get_logpdf(q[self.pmap[str(param)]]))
 
         return q, float(lqxy)
+    """
     
     def draw_from_env_prior(self, x, iter, beta):
         """
@@ -430,7 +432,7 @@ class ceffylGP():
         """
         function to get array of initial samples
         """
-        log10_rhos = self.log10_rho.sample()
+        #log10_rhos = self.log10_rho.sample()
         etas = [h.sample() for h in self.hypervar]
         
         return np.hstack(etas)
