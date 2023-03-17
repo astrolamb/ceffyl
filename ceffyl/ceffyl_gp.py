@@ -15,6 +15,7 @@ from ceffyl import Ceffyl, models
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
 from holodeck.gps import gp_utils
 from scipy.special import logsumexp
+from enterprise.signals import gp_priors
 ################################################################################
 class JumpProposal(object):
     """
@@ -377,13 +378,52 @@ class ceffylGP():
         psd_sigma =  h2cf_sigma/(12*np.pi**2 * self.freqs**3 * self.Tspan)
         log10_sigma = (0.5*psd_sigma/(psd*np.log(10)))[:,None]
 
-        # compare GP predicted log10rho to sampled log10rho using Gaussian
+        # compare GP predicted log10rho to log10rho grid using Gaussian
         ln_gaussian = -0.5 * (((self.rho_grid -
                                 log10_rho_gp)/log10_sigma)**2 +
                               np.log(2*np.pi*log10_sigma**2))
         
         ln_freespec = self.ln_freespec
 
+        # basic integral over rho - need to trapesium rule!
+        drho = self.ceffyl_pta.rho_grid[1] - self.ceffyl_pta.rho_grid[0]
+        ln_integrand = ln_freespec + ln_gaussian + np.log(drho)
+        ln_like = logsumexp(ln_integrand)  # need to vectorise for pulsars
+
+        return ln_like  # return ln gaussian
+    
+    def ln_likelihood_powerlaw_test(self, x0, sigma=0.01):
+        """
+        likelihood function - instead of using a GP, a powerlaw is fitted
+        with some variance sigma
+        """
+        # ensure constant values are in the correct place!
+        etac = np.zeros(len(self.hyperparams))  # empty array
+        etac[self.hypervar_idx] = x0
+        etac[self.const_idx] = self.const_values
+        
+        ## Predict GP
+        h2cf = (gp_priors.powerlaw(self.freqs, *x0, components=1) * 
+                (12*np.pi**2 * self.freqs**3 * self.Tspan))
+        h2cf_sigma = sigma * h2cf * np.log(10)
+
+        # turn predicted h2cf to psd (and propogate uncertainty!)
+        psd =  h2cf/(12*np.pi**2 *
+                     self.freqs**3 * self.Tspan)
+        log10_rho_gp = 0.5*np.log10(psd)[:,None]
+
+        # turn predicted psd to log10rho (and propogate uncertainty!)
+        psd_sigma =  h2cf_sigma/(12*np.pi**2 * self.freqs**3 * self.Tspan)
+        log10_sigma = (0.5*psd_sigma/(psd*np.log(10)))[:,None]
+
+        # compare GP predicted log10rho to log10rho grid using Gaussian
+        ln_gaussian = -0.5 * (((self.rho_grid -
+                                log10_rho_gp)/log10_sigma)**2 +
+                              np.log(2*np.pi*log10_sigma**2))
+        
+        ln_freespec = self.ln_freespec
+
+        # basic integral over rho - need to trapesium rule!
         drho = self.ceffyl_pta.rho_grid[1] - self.ceffyl_pta.rho_grid[0]
         ln_integrand = ln_freespec + ln_gaussian + np.log(drho)
         ln_like = logsumexp(ln_integrand)  # need to vectorise for pulsars
@@ -417,7 +457,8 @@ class ceffylGPSampler():
     """
     def __init__(self, trainedGPdir, spectradir, ceffyldir, hyperparams,
                  outdir, emp_dist_dir=None, resume=True, Nfreqs=None,
-                 freq_idxs=None, log10_rho_priors=[-10., -5.9], jump=True):
+                 freq_idxs=None, log10_rho_priors=[-10., -5.9], jump=True,
+                 test=False, test_sigma=0.01):
         """
         Initialise the class!
 
@@ -435,6 +476,10 @@ class ceffylGPSampler():
                           bins to fit to
         @param log10_rho_priors: min/max to search over log10_rho -- NEEDS TO
                                  BE AUTOMATED
+        @param test: flag to test powerlaw w/ variance, not GPs. Loaded GPs
+                     will be ignored\
+        @param test_sigma: hard coded std dev to add test powerlaw at each freq
+                           if test==True
         """
 
         # Load trained GPs
@@ -470,6 +515,12 @@ class ceffylGPSampler():
         # set up sampler
         x0 = ceffyl_gp.initial_samples()
         cov = np.identity(len(x0))*0.01
+
+        if test:  # flag to test code against a powerlaw w/ variance
+            logl = ceffyl_gp.ln_likelihood_powerlaw_test
+        else:
+            logl = ceffyl_gp.ln_likelihood
+        
         sampler = ptmcmc(len(x0), logl=ceffyl_gp.ln_likelihood,
                          logp=ceffyl_gp.ln_prior, cov=cov, groups=groups,
                          outDir=outdir, resume=resume)
