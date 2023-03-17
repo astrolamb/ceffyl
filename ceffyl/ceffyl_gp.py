@@ -360,28 +360,26 @@ class ceffylGP():
         etac[self.const_idx] = self.const_values
         
         ## Predict GP
-        _, log10h2cf, log10h2cf_sigma = gp_utils.hc_from_gp(self.gp_george,
-                                                            self.gp, etac)
-        log10h2cf_sigma = log10h2cf_sigma[:,1]
+        hc, _, log10h2cf_sigma = gp_utils.hc_from_gp(self.gp_george,
+                                                     self.gp, etac)
+        log10h2cf_sigma = log10h2cf_sigma[:,1]  # uncertainty on log10h2cf
 
         ## Convert Zero-Mean to Characteristic Strain Squared
-        h2cf = 10**(log10h2cf)
-        h2cf_sigma = log10h2cf_sigma * h2cf * np.log(10)  # propagation of
-                                                          # uncertainty
+        h2cf = hc**2
 
-        # turn predicted h2cf to psd (and propogate uncertainty!)
+        # turn predicted h2cf to psd/T to log10_rho
         psd =  h2cf/(12*np.pi**2 *
                      self.freqs**3 * self.Tspan)
         log10_rho_gp = 0.5*np.log10(psd)[:,None]
 
-        # turn predicted psd to log10rho (and propogate uncertainty!)
-        psd_sigma =  h2cf_sigma/(12*np.pi**2 * self.freqs**3 * self.Tspan)
-        log10_sigma = (0.5*psd_sigma/(psd*np.log(10)))[:,None]
+        # propogate uncertainty from log10_h2cf to log10_rho
+        # propogations cancel to get log10rho_sigma=log10h2cf_sigma/2 !!
+        log10rho_sigma = (0.5*log10h2cf_sigma)[:,None]
 
         # compare GP predicted log10rho to log10rho grid using Gaussian
         ln_gaussian = -0.5 * (((self.rho_grid -
-                                log10_rho_gp)/log10_sigma)**2 +
-                              np.log(2*np.pi*log10_sigma**2))
+                                log10_rho_gp)/log10rho_sigma)**2 +
+                              np.log(2*np.pi*log10rho_sigma**2))
         
         ln_freespec = self.ln_freespec
 
@@ -403,23 +401,18 @@ class ceffylGP():
         etac[self.const_idx] = self.const_values
         
         ## Predict GP
-        h2cf = (gp_priors.powerlaw(self.freqs, *x0, components=1) * 
-                (12*np.pi**2 * self.freqs**3 * self.Tspan))
-        h2cf_sigma = sigma * h2cf * np.log(10)
+        log10_rho_pl = 0.5*np.log10(gp_priors.powerlaw(self.freqs, *x0,
+                                                       components=1))[:,None]
+        log10h2cf_sigma = sigma  # uncertainty on log10h2cf
 
-        # turn predicted h2cf to psd (and propogate uncertainty!)
-        psd =  h2cf/(12*np.pi**2 *
-                     self.freqs**3 * self.Tspan)
-        log10_rho_gp = 0.5*np.log10(psd)[:,None]
-
-        # turn predicted psd to log10rho (and propogate uncertainty!)
-        psd_sigma =  h2cf_sigma/(12*np.pi**2 * self.freqs**3 * self.Tspan)
-        log10_sigma = (0.5*psd_sigma/(psd*np.log(10)))[:,None]
+        # propogate uncertainty from log10_h2cf to log10_rho
+        # propogations cancel to get log10rho_sigma=log10h2cf_sigma/2 !!
+        log10rho_sigma = (0.5*log10h2cf_sigma)[:,None]
 
         # compare GP predicted log10rho to log10rho grid using Gaussian
         ln_gaussian = -0.5 * (((self.rho_grid -
-                                log10_rho_gp)/log10_sigma)**2 +
-                              np.log(2*np.pi*log10_sigma**2))
+                                log10_rho_pl)/log10rho_sigma)**2 +
+                              np.log(2*np.pi*log10rho_sigma**2))
         
         ln_freespec = self.ln_freespec
 
