@@ -20,7 +20,7 @@ def chain_utils(chaindir=None, corepath=None):
     # calculate and plot grubin
     Rhat, idx = dg.grubin(chain)
     print(f'Min/max Gelman-Rubin tests: {min(Rhat), max(Rhat)}\n')
-    if np.array(chain.params)[idx]:
+    if idx.any():
         print(f'Undersampled parameters: {np.array(chain.params)[idx]}\n')
     dg.plot_grubin(chain)
 
