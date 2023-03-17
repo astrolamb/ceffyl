@@ -386,9 +386,9 @@ class ceffylGP():
         # basic integral over rho - need to trapesium rule!
         drho = self.ceffyl_pta.rho_grid[1] - self.ceffyl_pta.rho_grid[0]
         ln_integrand = ln_freespec + ln_gaussian + np.log(drho)
-        ln_like = logsumexp(ln_integrand)  # need to vectorise for pulsars
+        ln_like = logsumexp(ln_integrand, axis=1)  # need to vectorise for pulsars
 
-        return ln_like  # return ln gaussian
+        return np.sum(ln_like)  # return ln gaussian
     
     def ln_likelihood_powerlaw_test(self, x0, sigma=0.01):
         """
