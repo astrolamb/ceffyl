@@ -403,7 +403,8 @@ class ceffylGP():
         ## Predict GP
         log10_rho_pl = 0.5*np.log10(gp_priors.powerlaw(self.freqs, *x0,
                                                        components=1))[:,None]
-        log10h2cf_sigma = sigma  # uncertainty on log10h2cf
+        # uncertainty on log10h2cf
+        log10h2cf_sigma = np.repeat(sigma, repeats=self.Nfreqs)
 
         # propogate uncertainty from log10_h2cf to log10_rho
         # propogations cancel to get log10rho_sigma=log10h2cf_sigma/2 !!
