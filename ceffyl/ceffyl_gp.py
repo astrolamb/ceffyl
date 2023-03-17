@@ -521,7 +521,7 @@ class ceffylGPSampler():
         else:
             logl = ceffyl_gp.ln_likelihood
         
-        sampler = ptmcmc(len(x0), logl=ceffyl_gp.ln_likelihood,
+        sampler = ptmcmc(len(x0), logl=logl,
                          logp=ceffyl_gp.ln_prior, cov=cov, groups=groups,
                          outDir=outdir, resume=resume)
         
