@@ -7,7 +7,7 @@ This can be done by fitting to a free spectrum of the entire PTA or to individua
 
 ## Installation
 
-To install via `pip`, some non-python dependencies are required. You can find these in [https://github.com/astrolamb/ceffyl/edit/main/README.md#:~:text=README.md-,requirements,-.txt](requirements.txt)
+To install via `pip`, some non-python dependencies are required. You can find these in [requirements.txt](https://github.com/astrolamb/ceffyl/edit/main/README.md#:~:text=README.md-,requirements,-.txt)
 
 First, clone the repo
 ```bash
