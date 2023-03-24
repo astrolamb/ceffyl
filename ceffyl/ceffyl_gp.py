@@ -505,12 +505,13 @@ class ceffylGPSampler():
         else:
             gp, gp_george = None, None
 
-        if Nfreqs is None:
-            gp_george = list(np.array(gp_george)[freq_idxs])
-            gp = list(np.array(gp)[freq_idxs])
-        else:
-            gp_george = gp_george[:Nfreqs]
-            gp = gp[:Nfreqs]
+        if gp is not None and gp_george is not None:
+            if Nfreqs is None:
+                gp_george = list(np.array(gp_george)[freq_idxs])
+                gp = list(np.array(gp)[freq_idxs])
+            else:
+                gp_george = gp_george[:Nfreqs]
+                gp = gp[:Nfreqs]
 
         # set up ceffylGP class
         ceffyl_gp = ceffylGP(ceffyldir, Nfreqs=Nfreqs, hyperparams=hyperparams,
