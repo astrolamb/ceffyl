@@ -10,7 +10,6 @@ Classes to create noise signals and a parallel tempered PTMCMCSampler object
 to fit spectra to a density estimation of pulsar timing array data
 """
 
-
 class signal():
     """
     A class to add signals to the GFL
