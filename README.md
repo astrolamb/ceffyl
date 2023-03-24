@@ -19,6 +19,10 @@ Then pip install :)
 pip install ceffyl
 ```
 
+## examples
+
+Find examples on how to create KDE representations of free spectra, and how to fit your data to your chosen data sets, [in this directory!](https://github.com/astrolamb/ceffyl/tree/main/examples)
+
 ## Attribution
 
 citation info here
