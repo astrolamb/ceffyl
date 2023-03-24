@@ -284,7 +284,7 @@ class ceffylGP():
     """
     A class to fit GP to PTA free spectrum via ceffyl
     """
-    def __init__(self, datadir, hyperparams, gp, gp_george,
+    def __init__(self, datadir, hyperparams, gp, gp_george, spectrum,
                  Nfreqs=None, freq_idxs=None, log10_rho_priors=[-10, -6]):
         """
         Initialise the class
@@ -347,6 +347,9 @@ class ceffylGP():
         # saving parameter names
         env_names = [p.name for p in self.hypervar]
         self.param_names = env_names
+
+        self.gwb_spectra = np.array(spectrum['gwb'])[:,:Nfreqs]
+        self.samples = np.array(spectrum['sample_params'])
         
         return
         
@@ -423,6 +426,45 @@ class ceffylGP():
         ln_like = logsumexp(ln_integrand, axis=1)  # need to vectorise for pulsars
 
         return np.sum(ln_like)  # return ln gaussian
+
+    def holospectrum_lnlikelihood(self, x0):
+        """
+        function to fit holodeck simulations quickly
+        w/o GPs. Not as accurate, but rather fast!
+        """
+        # ensure constant values are in the correct place!
+        etac = np.zeros(len(self.hyperparams))  # empty array
+        etac[self.hypervar_idx] = x0
+        etac[self.const_idx] = self.const_values
+        
+        # find distances to grid points, take closest
+        dist = np.sqrt(np.sum((self.samples - x0)**2, axis=1))
+        idx = np.nanargmin(dist)
+        
+        # find mean, sigma of spectra at these points
+        mean_hc = np.mean(self.gwb_spectra[idx], axis=1)
+        sigma_hc = np.std(self.gwb_spectra[idx], axis=1)
+        
+        # turn predicted h2cf to psd/T to log10_rho
+        psd =  mean_hc**2/(12*np.pi**2 * self.freqs**3 * self.Tspan)
+        log10_rho_gp = 0.5*np.log10(psd)[:,None]
+        
+        # propogate uncertainty from hc to log10_rho
+        log10rho_sigma = (sigma_hc/(mean_hc*np.log(10)))[:,None]
+
+        # compare GP predicted log10rho to log10rho grid using Gaussian
+        ln_gaussian = -0.5 * (((self.rho_grid -
+                                log10_rho_gp)/log10rho_sigma)**2 +
+                            np.log(2*np.pi*log10rho_sigma**2))
+
+        ln_freespec = self.ln_freespec
+
+        # basic integral over rho - need to trapesium rule!
+        drho = self.ceffyl_pta.rho_grid[1] - self.ceffyl_pta.rho_grid[0]
+        ln_integrand = ln_freespec + ln_gaussian + np.log(drho)
+        ln_like = logsumexp(ln_integrand, axis=1)  # need to vectorise for pulsars
+        
+        return np.sum(ln_like)  # return ln gaussian
     
     def ln_prior(self, x0):
         """
@@ -452,7 +494,7 @@ class ceffylGPSampler():
     def __init__(self, trainedGPdir, spectradir, ceffyldir, hyperparams,
                  outdir, emp_dist_dir=None, resume=True, Nfreqs=None,
                  freq_idxs=None, log10_rho_priors=[-10., -5.9], jump=True,
-                 test=False, test_sigma=0.01):
+                 analysis_type='gp', test_sigma=0.01):
         """
         Initialise the class!
 
@@ -470,8 +512,11 @@ class ceffylGPSampler():
                           bins to fit to
         @param log10_rho_priors: min/max to search over log10_rho -- NEEDS TO
                                  BE AUTOMATED
-        @param test: flag to test powerlaw w/ variance, not GPs. Loaded GPs
-                     will be ignored\
+        @param analysis_type: kwarg to change logL
+                              - 'gp' will use trained GPs
+                              - 'holo_spectra' will approximate using spectra
+                                straight from holodeck
+                              - 'test' will use powerlaw w/ variance
         @param test_sigma: hard coded std dev to add test powerlaw at each freq
                            if test==True
         """
@@ -495,7 +540,8 @@ class ceffylGPSampler():
         # set up ceffylGP class
         ceffyl_gp = ceffylGP(ceffyldir, Nfreqs=Nfreqs, hyperparams=hyperparams,
                              gp=gp, gp_george=gp_george, freq_idxs=freq_idxs,
-                             log10_rho_priors=log10_rho_priors)
+                             log10_rho_priors=log10_rho_priors,
+                             spectrum=spectra)
         self.ceffyl_gp = ceffyl_gp
 
         # parameter groupings for better sampling
@@ -510,8 +556,10 @@ class ceffylGPSampler():
         x0 = ceffyl_gp.initial_samples()
         cov = np.identity(len(x0))*0.01
 
-        if test:  # flag to test code against a powerlaw w/ variance
+        if analysis_type == 'test':  # flag to test code against a powerlaw w/ variance
             logl = ceffyl_gp.ln_likelihood_powerlaw_test
+        elif analysis_type == 'holo_spectra':
+            logl = ceffyl_gp.holospectrum_lnlikelihood
         else:
             logl = ceffyl_gp.ln_likelihood
         
@@ -567,7 +615,7 @@ if __name__ == '__main__':
 
     # path to save MCMC chain
     #outdir = './test/'
-    outdir = '../../ng15yr_astro_interp/spec_libraries/circ-01_2023-02-23_01_n1000_s60_r100_f40/test_5f/'
+    outdir = '../../ng15yr_astro_interp/spec_libraries/circ-01_2023-02-23_01_n1000_s60_r100_f40/test_5f_bin/'
 
     import sys
     sys.path.append('../../ng15yr_astro_interp/')
@@ -592,6 +640,7 @@ if __name__ == '__main__':
     sampler = ceffylGPSampler(trainedGPdir=trainedGPdir, spectradir=spectradir,
                                 ceffyldir=ceffyldir, hyperparams=hyperparams,
                                 Nfreqs=Nfreqs, outdir=outdir,
+                                analysis_type='holo_spectra',
                                 emp_dist_dir=emp_dist_dir, jump=True)
     
     print('Here are your parameters...\n')
@@ -613,4 +662,4 @@ if __name__ == '__main__':
                 parameters=chain.params[:-4])
     c.configure(summary=True, smooth=False)
     fig = c.plotter.plot()
-    fig.savefig('./testfig.png')
+    fig.savefig(outdir + '/testfig.png')
