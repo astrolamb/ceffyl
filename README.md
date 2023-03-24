@@ -14,6 +14,7 @@ First, clone the repo
 git clone git@github.com:astrolamb/ceffyl.git
 ```
 
+Then pip install :)
 ```bash
 pip install ceffyl
 ```
