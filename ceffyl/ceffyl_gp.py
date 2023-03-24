@@ -10,7 +10,6 @@ import h5py
 import pickle
 from enterprise.signals import parameter
 from enterprise_extensions import sampler
-from enterprise_extensions.sampler import extend_emp_dists
 from ceffyl import Ceffyl, models
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
 from holodeck.gps import gp_utils
@@ -25,12 +24,11 @@ class JumpProposal(object):
     and
     PTMCMCSampler (https://github.com/jellis18/PTMCMCSampler/)
     """
-    def __init__(self, ceffylGP, empirical_distr=None):
+    def __init__(self, ceffylGP):
         """
         Set up some custom jump proposals
 
         @params ceffylGP - import an initialised ceffylGP class
-        @params empirical_distr: a list of log10_rho empirical distributions
         """
 
         # save information as class properties
@@ -38,7 +36,6 @@ class JumpProposal(object):
         self.param_names = ceffylGP.param_names  # list of parameter names
         self.hyperparams = ceffylGP.hypervar  # list of gp param names
         self.hypernames = [h.name for h in ceffylGP.hypervar]
-        self.empirical_distr = empirical_distr
 
         # parameter indices map
         self.pimap = {}
@@ -51,29 +48,6 @@ class JumpProposal(object):
             size = p.size or 1
             self.pmap[str(p)] = slice(ct, ct+size)
             ct += size
-            
-        # only save the empirical distributions for
-        # parameters that are in the model
-        if empirical_distr is not None:
-            mask = []
-            for idx, d in enumerate(empirical_distr):
-                if d.ndim == 1:
-                    if d.param_name in self.param_names:
-                        mask.append(idx)
-                else:
-                    if (d.param_name[0] in self.param_names 
-                        and d.param_name[1] in self.param_names):
-                        mask.append(idx)
-            if len(mask) >= 1:
-                self.empirical_distr = [empirical_distr[m] for m in mask]
-                # some empirical distribution do not cover the entire parameter
-                # space... extend empirical_distr here
-                print('Extending empirical distributions to priors...\n')
-                self.empirical_distr = extend_emp_dists(ceffylGP,
-                                                        self.empirical_distr,
-                                                        npoints=100_000)
-            else:
-                self.empirical_distr = None
 
     def draw_from_prior(self, x, iter, beta):
         """
@@ -492,9 +466,9 @@ class ceffylGPSampler():
     A class to quickly set-up ceffylGP and sample!
     """
     def __init__(self, trainedGPdir, spectradir, ceffyldir, hyperparams,
-                 outdir, emp_dist_dir=None, resume=True, Nfreqs=None,
-                 freq_idxs=None, log10_rho_priors=[-10., -5.9], jump=True,
-                 analysis_type='gp', test_sigma=0.01):
+                 outdir, resume=True, Nfreqs=None, freq_idxs=None,
+                 log10_rho_priors=[-10., -5.9], jump=True, analysis_type='gp',
+                 test_sigma=0.01):
         """
         Initialise the class!
 
@@ -504,8 +478,6 @@ class ceffylGPSampler():
         @param hyperparams: list of enterprise.signals.parameter objects
                             NOTE: assumes variables are in order
         @param outdir: directory to save MCMC samples
-        @param emp_dist_dir: directory containing list of empirical
-                             distributions to aid sampling
         @param resume: flag to resume MCMC sampling
         @param Nfreqs: number of frequencies to fit to
         @param freq_idxs: alternative to Nfreqs - input indexes of frequency
@@ -521,14 +493,17 @@ class ceffylGPSampler():
                            if test==True
         """
 
-        # Load trained GPs
-        with open(trainedGPdir, "rb") as f:  # load GaussProc objects
-            gp_george = pickle.load(f)  # this is not a list of George objects
-
         spectra = h5py.File(spectradir)  # open spectra file
 
-        # set up list of GP George objects
-        gp = gp_utils.set_up_predictions(spectra, gp_george)
+        # Load trained GPs
+        if trainedGPdir is not None:
+            with open(trainedGPdir, "rb") as f:  # load GaussProc objects
+                gp_george = pickle.load(f)  # this is not a list of George objects
+
+            # set up list of GP George objects
+            gp = gp_utils.set_up_predictions(spectra, gp_george)
+        else:
+            gp, gp_george = None, None
 
         if Nfreqs is None:
             gp_george = list(np.array(gp_george)[freq_idxs])
@@ -566,17 +541,10 @@ class ceffylGPSampler():
         sampler = ptmcmc(len(x0), logl=logl,
                          logp=ceffyl_gp.ln_prior, cov=cov, groups=groups,
                          outDir=outdir, resume=resume)
-        
-        # load empirical distributions
-        if emp_dist_dir is not None:
-            with open(emp_dist_dir, 'rb') as f:
-                empirical_distr = pickle.load(f)
-        else:
-            empirical_distr = None
 
         # add jump proposals for better sampling
         if jump:
-            jp = JumpProposal(ceffyl_gp, empirical_distr=empirical_distr)
+            jp = JumpProposal(ceffyl_gp)
             sampler.addProposalToCycle(jp.draw_from_prior, 10)
             sampler.addProposalToCycle(jp.draw_from_env_prior, 20)
 
@@ -611,7 +579,6 @@ if __name__ == '__main__':
     trainedGPdir = '../../ng15yr_astro_interp/spec_libraries/circ-01_2023-02-23_01_n1000_s60_r100_f40/trained_gp_circ-01_2023-02-23_01_n1000_s60_r100_f40.pkl'
     spectradir = '../../ng15yr_astro_interp/spec_libraries/circ-01_2023-02-23_01_n1000_s60_r100_f40/sam_lib.hdf5'
     ceffyldir = '../../ng15yr_astro_interp/ceffyl_ng15_multiorf_hdonly'
-    emp_dist_dir = '../../ng15yr_astro_interp/ceffyl_ng15_multiorf_hdonly/fs_emp_dist.pkl'
 
     # path to save MCMC chain
     #outdir = './test/'
@@ -640,8 +607,7 @@ if __name__ == '__main__':
     sampler = ceffylGPSampler(trainedGPdir=trainedGPdir, spectradir=spectradir,
                                 ceffyldir=ceffyldir, hyperparams=hyperparams,
                                 Nfreqs=Nfreqs, outdir=outdir,
-                                analysis_type='holo_spectra',
-                                emp_dist_dir=emp_dist_dir, jump=True)
+                                analysis_type='holo_spectra', jump=True)
     
     print('Here are your parameters...\n')
     print(sampler.ceffyl_gp.param_names)
