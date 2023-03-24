@@ -535,8 +535,11 @@ class ceffylGPSampler():
             logl = ceffyl_gp.ln_likelihood_powerlaw_test
         elif analysis_type == 'holo_spectra':
             logl = ceffyl_gp.holospectrum_lnlikelihood
-        else:
+        elif  analysis_type == 'gp':
             logl = ceffyl_gp.ln_likelihood
+        else:
+            print("Please choose between 'test', 'holo_spectra', and 'gp'\n")
+            return
         
         sampler = ptmcmc(len(x0), logl=logl,
                          logp=ceffyl_gp.ln_prior, cov=cov, groups=groups,
