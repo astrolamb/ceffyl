@@ -35,9 +35,10 @@ class DE_factory:
 
         @param coredir: directory of core objects for the GFL
                         ASSUMPTIONS - all cores have the same frequencies
+        @param recursive: a flag to note that posteriors are saved in
+                          subdirectories labeled by 'psr_x'. Default:False
         @param pulsar_names: list of pulsar names
-        @param single_pulsars: directory of directories when looking for cores.
-                               Default: True; set False for PTA freespec
+        @param rho_labels: load a subset of log10rho parameters
         """
 
         if recursive:  # search for cores
