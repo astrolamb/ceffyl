@@ -14,9 +14,5 @@ authors:
     orcid: 'https://orcid.org/0000-0003-1096-4156'
   - given-names: Stephen R. Taylor
     affiliation: Vanderbilt University
-  - given-names: Xavier Siemens
-    affiliation: Oregon State University
-  - given-names: Michele Vallisneri
-    affiliation: JPL Caltech
-  - given-names: Joe Romano
-    affiliation: Texas Tech University
+  - given-names: Rutger van Haasteren
+    affiliation: Max-Planck-Institut f{\"u}r Gravitationsphysik (Albert-Einstein-Institut)
