@@ -11,6 +11,8 @@ import argparse
 import pickle
 from natsort import natsorted
 import la_forge.core as co
+from ceffyl import densities
+import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--N_freqs', type=int, default=10,
@@ -86,3 +88,11 @@ sampler.sample(x0, N, neff=int(1e7))  # SAMPLE!
 # save chain as la_forge core
 chain = co.Core(args.outdir+f'realisation_{int(args.idx/45)}/psr_{args.idx%45}/')
 chain.save(args.outdir+f'realisation_{int(args.idx/45)}/psr_{args.idx%45}/chain.core')
+
+# calculate bandwidths for this posterior ready to fit
+bw = densities.DE_factory(args.outdir+f'realisation_{int(args.idx/45)}/psr_{args.idx%45}/',
+                          recursive=False, pulsar_names=['temporary name'])
+bws = np.array([bw.bandwidth(chain(rho)) for rho in chain.params 
+                if 'rho' in rho])
+np.save(args.outdir+f'realisation_{int(args.idx/45)}/psr_{args.idx%45}/bandwidths',
+        bws)

@@ -322,8 +322,12 @@ class ceffylGP():
         env_names = [p.name for p in self.hypervar]
         self.param_names = env_names
 
-        self.gwb_spectra = np.array(spectrum['gwb'])[:,:Nfreqs]
-        self.samples = np.array(spectrum['sample_params'])
+        gwb_spectra = np.array(spectrum['gwb'])[:,:Nfreqs]
+        samples = np.array(spectrum['sample_params'])
+
+        nan_ind = np.any(np.isnan(gwb_spectra),axis=(1,2))
+        self.gwb_spectra = gwb_spectra[~nan_ind]
+        self.samples = samples[~nan_ind]
         
         return
         
@@ -407,24 +411,24 @@ class ceffylGP():
         w/o GPs. Not as accurate, but rather fast!
         """
         # ensure constant values are in the correct place!
-        etac = np.zeros(len(self.hyperparams))  # empty array
-        etac[self.hypervar_idx] = x0
-        etac[self.const_idx] = self.const_values
+        xs = np.zeros(len(self.hyperparams))  # empty array
+        xs[self.hypervar_idx] = x0
+        xs[self.const_idx] = self.const_values
         
         # find distances to grid points, take closest
-        dist = np.sqrt(np.sum((self.samples - x0)**2, axis=1))
+        dist = np.sqrt(np.sum((self.samples - xs)**2, axis=1))
         idx = np.nanargmin(dist)
         
         # find mean, sigma of spectra at these points
-        mean_hc = np.mean(self.gwb_spectra[idx], axis=1)
+        hc = np.median(self.gwb_spectra[idx], axis=1)
         sigma_hc = np.std(self.gwb_spectra[idx], axis=1)
         
         # turn predicted h2cf to psd/T to log10_rho
-        psd =  mean_hc**2/(12*np.pi**2 * self.freqs**3 * self.Tspan)
+        psd =  hc**2/(12*np.pi**2 * self.freqs**3 * self.Tspan)
         log10_rho_gp = 0.5*np.log10(psd)[:,None]
         
         # propogate uncertainty from hc to log10_rho
-        log10rho_sigma = (sigma_hc/(mean_hc*np.log(10)))[:,None]
+        log10rho_sigma = (sigma_hc/(hc*np.log(10)))[:,None]
 
         # compare GP predicted log10rho to log10rho grid using Gaussian
         ln_gaussian = -0.5 * (((self.rho_grid -
