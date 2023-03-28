@@ -15,6 +15,7 @@ from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
 from holodeck.gps import gp_utils
 from scipy.special import logsumexp
 from enterprise.signals import gp_priors
+from scipy.integrate import griddata
 ################################################################################
 class JumpProposal(object):
     """
@@ -417,11 +418,18 @@ class ceffylGP():
         
         # find distances to grid points, take closest
         dist = np.sqrt(np.sum((self.samples - xs)**2, axis=1))
-        idx = np.nanargmin(dist)
+        #idx = np.nanargmin(dist)
+        idx = np.argsort(dist)[-12:]
+        intep = griddata(self.samples[idx],
+                         self.gwb_spectra[idx],
+                         x0)
         
         # find mean, sigma of spectra at these points
-        hc = np.median(self.gwb_spectra[idx], axis=1)
-        sigma_hc = np.std(self.gwb_spectra[idx], axis=1)
+        #hc = np.median(self.gwb_spectra[idx], axis=1)
+        #sigma_hc = np.std(self.gwb_spectra[idx], axis=1)
+
+        hc = np.median(intep, axis=1)
+        sigma_hc = np.std(intep, axis=1)
         
         # turn predicted h2cf to psd/T to log10_rho
         psd =  hc**2/(12*np.pi**2 * self.freqs**3 * self.Tspan)
@@ -433,7 +441,7 @@ class ceffylGP():
         # compare GP predicted log10rho to log10rho grid using Gaussian
         ln_gaussian = -0.5 * (((self.rho_grid -
                                 log10_rho_gp)/log10rho_sigma)**2 +
-                            np.log(2*np.pi*log10rho_sigma**2))
+                              np.log(2*np.pi*log10rho_sigma**2))
 
         ln_freespec = self.ln_freespec
 
