@@ -27,4 +27,13 @@ Find [examples](https://github.com/astrolamb/ceffyl/tree/main/examples) on how t
 
 ## Attribution
 
-citation info here
+```bash
+@misc{lamb2023need,
+      title={The Need For Speed: Rapid Refitting Techniques for Bayesian Spectral Characterization of the Gravitational Wave Background Using PTAs}, 
+      author={William G. Lamb and Stephen R. Taylor and Rutger van Haasteren},
+      year={2023},
+      eprint={2303.15442},
+      archivePrefix={arXiv},
+      primaryClass={astro-ph.HE}
+}
+```
