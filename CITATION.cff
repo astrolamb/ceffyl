@@ -15,7 +15,6 @@ authors:
     affiliation: Vanderbilt University
   - given-names: Rutger van Haasteren
     affiliation: Max-Planck-Institut f{\"u}r Gravitationsphysik (Albert-Einstein-Institut)
-preferred-citation:
-  type: article
-  title: "The Need For Speed: Rapid Refitting Techniques for Bayesian Spectral Characterization of the Gravitational Wave Background Using PTAs"
-  url: "https://arxiv.org/abs/2303.15442"
+type: article
+title: "The Need For Speed: Rapid Refitting Techniques for Bayesian Spectral Characterization of the Gravitational Wave Background Using PTAs"
+url: "https://arxiv.org/abs/2303.15442"
