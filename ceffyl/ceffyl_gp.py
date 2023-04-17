@@ -419,11 +419,12 @@ class ceffylGP():
         w/o GPs. Not as accurate, but rather fast!
         """
         # ensure constant values are in the correct place!
-        etac = np.zeros(len(self.hyperparams))  # empty array
-        etac[self.hypervar_idx] = x0
-        etac[self.const_idx] = self.const_values
+        xs = np.zeros(len(self.hyperparams))  # empty array
+        xs[self.hypervar_idx] = x0
+        xs[self.const_idx] = self.const_values
         
         # find distances to grid points, take closest
+<<<<<<< HEAD
         #dist = np.sqrt(np.sum((self.samples - x0)**2, axis=1))
         #idx = np.nanargmin(dist)
         #idx = np.argsort(dist)[-1000:]
@@ -432,6 +433,10 @@ class ceffylGP():
         #                 x0)
         
         interp = self.interpolator(x0)
+=======
+        dist = np.sqrt(np.sum((self.samples - xs)**2, axis=1))
+        idx = np.nanargmin(dist)
+>>>>>>> 5be823ce74c20475f27a4719ac002dc47b8e45df
         
         # find mean, sigma of spectra at these points
         #hc = np.median(self.gwb_spectra[idx], axis=1)
