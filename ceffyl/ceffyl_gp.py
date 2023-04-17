@@ -15,6 +15,8 @@ from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
 from holodeck.gps import gp_utils
 from scipy.special import logsumexp
 from enterprise.signals import gp_priors
+from scipy.interpolate import griddata, LinearNDInterpolator
+from scipy.spatial import Delaunay
 ################################################################################
 class JumpProposal(object):
     """
@@ -329,6 +331,11 @@ class ceffylGP():
         self.gwb_spectra = gwb_spectra[~nan_ind]
         self.samples = samples[~nan_ind]
         
+        # create interpolation
+        tri = Delaunay(self.samples)
+        interpolator = LinearNDInterpolator(tri, self.gwb_spectra)
+        self.interpolator = interpolator
+        
         return
         
     def ln_likelihood(self, x0):
@@ -364,10 +371,11 @@ class ceffylGP():
         
         ln_freespec = self.ln_freespec
 
-        # basic integral over rho - need to trapesium rule!
-        drho = self.ceffyl_pta.rho_grid[1] - self.ceffyl_pta.rho_grid[0]
-        ln_integrand = ln_freespec + ln_gaussian + np.log(drho)
-        ln_like = logsumexp(ln_integrand, axis=1)  # need to vectorise for pulsars
+        # numerical integration using the trapezium rule
+        dlog10rho = self.ceffyl_pta.rho_grid[1] - self.ceffyl_pta.rho_grid[0]
+        ln_integrand = ln_freespec + ln_gaussian
+        ln_integrand[1:-1] += np.log(2)
+        ln_like = logsumexp(ln_integrand, axis=1, b=0.5*dlog10rho)  # need to vectorise for pulsars
 
         return np.sum(ln_like)  # return ln gaussian
     
@@ -416,24 +424,33 @@ class ceffylGP():
         etac[self.const_idx] = self.const_values
         
         # find distances to grid points, take closest
-        dist = np.sqrt(np.sum((self.samples - x0)**2, axis=1))
-        idx = np.nanargmin(dist)
+        #dist = np.sqrt(np.sum((self.samples - x0)**2, axis=1))
+        #idx = np.nanargmin(dist)
+        #idx = np.argsort(dist)[-1000:]
+        #intep = griddata(self.samples[idx],
+        #                 self.gwb_spectra[idx],
+        #                 x0)
+        
+        interp = self.interpolator(x0)
         
         # find mean, sigma of spectra at these points
-        hc = np.median(self.gwb_spectra[idx], axis=1)
-        sigma_hc = np.std(self.gwb_spectra[idx], axis=1)
+        #hc = np.median(self.gwb_spectra[idx], axis=1)
+        #sigma_hc = np.std(self.gwb_spectra[idx], axis=1)
+
+        hc = np.median(interp, axis=2)
+        sigma_hc = np.std(interp, axis=2)
         
         # turn predicted h2cf to psd/T to log10_rho
         psd =  hc**2/(12*np.pi**2 * self.freqs**3 * self.Tspan)
-        log10_rho_gp = 0.5*np.log10(psd)[:,None]
+        log10_rho_gp = 0.5*np.log10(psd).T
         
         # propogate uncertainty from hc to log10_rho
-        log10rho_sigma = (sigma_hc/(hc*np.log(10)))[:,None]
+        log10rho_sigma = (sigma_hc/(hc*np.log(10))).T
 
         # compare GP predicted log10rho to log10rho grid using Gaussian
         ln_gaussian = -0.5 * (((self.rho_grid -
                                 log10_rho_gp)/log10rho_sigma)**2 +
-                            np.log(2*np.pi*log10rho_sigma**2))
+                              np.log(2*np.pi*log10rho_sigma**2))
 
         ln_freespec = self.ln_freespec
 
