@@ -1,8 +1,8 @@
-################################################################################
+###############################################################################
 # ceffylGP
 # A script to fit trained GPs to PTA free spectrum
 # Author: William G. Lamb 2023
-################################################################################
+###############################################################################
 
 # imports
 import numpy as np
@@ -15,9 +15,11 @@ from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
 from holodeck.gps import gp_utils
 from scipy.special import logsumexp
 from enterprise.signals import gp_priors
-from scipy.interpolate import griddata, LinearNDInterpolator
+from scipy.interpolate import LinearNDInterpolator
 from scipy.spatial import Delaunay
-################################################################################
+###############################################################################
+
+
 class JumpProposal(object):
     """
     A class to propose jumps for parallel tempered swaps
@@ -254,14 +256,16 @@ class JumpProposal(object):
                 param.get_logpdf(q[self.pmap[str(param)]]))
 
         return q, float(lqxy)
+###############################################################################
 
-################################################################################
+
 class ceffylGP():
     """
     A class to fit GP to PTA free spectrum via ceffyl
     """
-    def __init__(self, datadir, hyperparams, gp, gp_george, spectrum,
-                 Nfreqs=None, freq_idxs=None, log10_rho_priors=[-10, -6]):
+    def __init__(self, datadir, hyperparams, gp, gp_george, var_gp,
+                 var_gp_george, spectrum, Nfreqs=None, freq_idxs=None,
+                 log10_rho_priors=[-10, -6]):
         """
         Initialise the class
 
@@ -281,6 +285,8 @@ class ceffylGP():
         self.hyperparams = hyperparams
         self.gp = gp
         self.gp_george = gp_george
+        self.var_gp = var_gp
+        self.var_gp_george = var_gp_george
         
         # create ceffyl object w/ Nfreq free spec
         ceffyl_pta = Ceffyl.ceffyl(datadir)
@@ -289,7 +295,7 @@ class ceffylGP():
         log10_rho = parameter.Uniform(*log10_rho_priors, 
                                       size=Nfreqs)('log10_rho')
         gw = Ceffyl.signal(psd=models.free_spectrum, N_freqs=Nfreqs,
-                          params=[log10_rho], freq_idxs=freq_idxs)
+                           params=[log10_rho], freq_idxs=freq_idxs)
         ceffyl_pta = ceffyl_pta.add_signals([gw])
         self.ceffyl_pta = ceffyl_pta  # save ceffyl object
         
@@ -297,37 +303,38 @@ class ceffylGP():
         self.freqs = ceffyl_pta.freqs[:Nfreqs]  # save frequencies
 
         # save rho grid
-        #rho_mask = (self.ceffyl_pta.rho_grid > log10_rho_priors[0] and 
+        # rho_mask = (self.ceffyl_pta.rho_grid > log10_rho_priors[0] and 
         #            self.ceffyl_pta.rho_grid < log10_rho_priors[1])
         rho_grid = self.ceffyl_pta.rho_grid
         self.rho_grid = np.repeat([rho_grid], repeats=Nfreqs,
-                                  axis=0) # save freespec probability grid
+                                  axis=0)  # save freespec probability grid
 
         # saving locations of constant hyperparams
         const_idx = np.where(np.array([hasattr(h, 'sample')
-                                       for h in hyperparams])==False)[0]
+                                       for h in hyperparams]) == False)[0]
         const_values = np.array([h.value for h
                                  in np.array(hyperparams)[const_idx]])
         self.const_idx, self.const_values = const_idx, const_values
         
         # locations of variable hyperparams
         self.hypervar_idx = np.where(np.array([hasattr(h, 'sample')
-                                               for h in hyperparams])==True)[0]
+                                               for h
+                                               in hyperparams]) == True)[0]
         self.hypervar = np.array(hyperparams)[self.hypervar_idx]
 
         # saving params that can be sampled (i.e. no constant values)
         self.params = list(self.hypervar)
 
-        self.ln_freespec = ceffyl_pta.density[0,:self.Nfreqs]
+        self.ln_freespec = ceffyl_pta.density[0, :self.Nfreqs]
         
         # saving parameter names
         env_names = [p.name for p in self.hypervar]
         self.param_names = env_names
 
-        gwb_spectra = np.array(spectrum['gwb'])[:,:Nfreqs]
+        gwb_spectra = np.array(spectrum['gwb'])[:, :Nfreqs]
         samples = np.array(spectrum['sample_params'])
 
-        nan_ind = np.any(np.isnan(gwb_spectra),axis=(1,2))
+        nan_ind = np.any(np.isnan(gwb_spectra), axis=(1, 2))
         self.gwb_spectra = gwb_spectra[~nan_ind]
         self.samples = samples[~nan_ind]
         
@@ -346,23 +353,25 @@ class ceffylGP():
         etac = np.zeros(len(self.hyperparams))  # empty array
         etac[self.hypervar_idx] = x0
         etac[self.const_idx] = self.const_values
-        
-        ## Predict GP
-        hc, _, log10h2cf_sigma = gp_utils.hc_from_gp(self.gp_george,
-                                                     self.gp, etac)
-        log10h2cf_sigma = log10h2cf_sigma[:,1]  # uncertainty on log10h2cf
 
-        ## Convert Zero-Mean to Characteristic Strain Squared
+        # Predict GP
+        hc, _, log10h2cf_sigma = gp_utils.hc_from_gp(self.gp_george,
+                                                     self.gp,
+                                                     self.var_gp_george,
+                                                     self.var_gp, etac)
+        log10h2cf_sigma = log10h2cf_sigma[:, 1]  # uncertainty on log10h2cf
+
+        # Convert Zero-Mean to Characteristic Strain Squared
         h2cf = hc**2
 
         # turn predicted h2cf to psd/T to log10_rho
-        psd =  h2cf/(12*np.pi**2 *
+        psd = h2cf/(12*np.pi**2 *
                      self.freqs**3 * self.Tspan)
-        log10_rho_gp = 0.5*np.log10(psd)[:,None]
+        log10_rho_gp = 0.5*np.log10(psd)[:, None]
 
         # propogate uncertainty from log10_h2cf to log10_rho
         # propogations cancel to get log10rho_sigma=log10h2cf_sigma/2 !!
-        log10rho_sigma = (0.5*log10h2cf_sigma)[:,None]
+        log10rho_sigma = (0.5*log10h2cf_sigma)[:, None]
 
         # compare GP predicted log10rho to log10rho grid using Gaussian
         ln_gaussian = -0.5 * (((self.rho_grid -
@@ -375,7 +384,7 @@ class ceffylGP():
         dlog10rho = self.ceffyl_pta.rho_grid[1] - self.ceffyl_pta.rho_grid[0]
         ln_integrand = ln_freespec + ln_gaussian
         ln_integrand[1:-1] += np.log(2)
-        ln_like = logsumexp(ln_integrand, axis=1, b=0.5*dlog10rho)  # need to vectorise for pulsars
+        ln_like = logsumexp(ln_integrand, axis=1, b=0.5*dlog10rho)
 
         return np.sum(ln_like)  # return ln gaussian
     
@@ -389,15 +398,15 @@ class ceffylGP():
         etac[self.hypervar_idx] = x0
         etac[self.const_idx] = self.const_values
         
-        ## Predict GP
+        # Predict GP
         log10_rho_pl = 0.5*np.log10(gp_priors.powerlaw(self.freqs, *x0,
-                                                       components=1))[:,None]
+                                                       components=1))[:, None]
         # uncertainty on log10h2cf
         log10h2cf_sigma = np.repeat(sigma, repeats=self.Nfreqs)
 
         # propogate uncertainty from log10_h2cf to log10_rho
         # propogations cancel to get log10rho_sigma=log10h2cf_sigma/2 !!
-        log10rho_sigma = (0.5*log10h2cf_sigma)[:,None]
+        log10rho_sigma = (0.5*log10h2cf_sigma)[:, None]
 
         # compare GP predicted log10rho to log10rho grid using Gaussian
         ln_gaussian = -0.5 * (((self.rho_grid -
@@ -409,7 +418,7 @@ class ceffylGP():
         # basic integral over rho - need to trapesium rule!
         drho = self.ceffyl_pta.rho_grid[1] - self.ceffyl_pta.rho_grid[0]
         ln_integrand = ln_freespec + ln_gaussian + np.log(drho)
-        ln_like = logsumexp(ln_integrand, axis=1)  # need to vectorise for pulsars
+        ln_like = logsumexp(ln_integrand, axis=1)
 
         return np.sum(ln_like)  # return ln gaussian
 
@@ -423,20 +432,7 @@ class ceffylGP():
         xs[self.hypervar_idx] = x0
         xs[self.const_idx] = self.const_values
         
-        # find distances to grid points, take closest
-<<<<<<< HEAD
-        #dist = np.sqrt(np.sum((self.samples - x0)**2, axis=1))
-        #idx = np.nanargmin(dist)
-        #idx = np.argsort(dist)[-1000:]
-        #intep = griddata(self.samples[idx],
-        #                 self.gwb_spectra[idx],
-        #                 x0)
-        
         interp = self.interpolator(x0)
-=======
-        dist = np.sqrt(np.sum((self.samples - xs)**2, axis=1))
-        idx = np.nanargmin(dist)
->>>>>>> 5be823ce74c20475f27a4719ac002dc47b8e45df
         
         # find mean, sigma of spectra at these points
         #hc = np.median(self.gwb_spectra[idx], axis=1)
@@ -491,8 +487,8 @@ class ceffylGPSampler():
     """
     A class to quickly set-up ceffylGP and sample!
     """
-    def __init__(self, trainedGPdir, spectradir, ceffyldir, hyperparams,
-                 outdir, resume=True, Nfreqs=None, freq_idxs=None,
+    def __init__(self, trainedGP, trained_varGP, spectrafile, ceffyldir,
+                 hyperparams, outdir, resume=True, Nfreqs=None, freq_idxs=None,
                  log10_rho_priors=[-10., -5.9], jump=True, analysis_type='gp',
                  test_sigma=0.01):
         """
@@ -519,11 +515,11 @@ class ceffylGPSampler():
                            if test==True
         """
 
-        spectra = h5py.File(spectradir)  # open spectra file
+        spectra = h5py.File(spectrafile)  # open spectra file
 
         # Load trained GPs
-        if trainedGPdir is not None:
-            with open(trainedGPdir, "rb") as f:  # load GaussProc objects
+        if trainedGP is not None:
+            with open(trainedGP, "rb") as f:  # load GaussProc objects
                 gp_george = pickle.load(f)  # this is not a list of George objects
 
             # set up list of GP George objects
@@ -539,9 +535,27 @@ class ceffylGPSampler():
                 gp_george = gp_george[:Nfreqs]
                 gp = gp[:Nfreqs]
 
+        if trained_varGP is not None:
+            with open(trained_varGP, "rb") as f:  # load GaussProc objects
+                var_gp_george = pickle.load(f)  # this is not a list of George objects
+
+            # set up list of GP George objects
+            var_gp = gp_utils.set_up_predictions(spectra, var_gp_george)
+        else:
+            var_gp, var_gp_george = None, None
+
+        if var_gp is not None and var_gp_george is not None:
+            if Nfreqs is None:
+                var_gp_george = list(np.array(var_gp_george)[freq_idxs])
+                var_gp = list(np.array(var_gp)[freq_idxs])
+            else:
+                var_gp_george = var_gp_george[:Nfreqs]
+                var_gp = var_gp[:Nfreqs]
+
         # set up ceffylGP class
         ceffyl_gp = ceffylGP(ceffyldir, Nfreqs=Nfreqs, hyperparams=hyperparams,
-                             gp=gp, gp_george=gp_george, freq_idxs=freq_idxs,
+                             gp=gp, gp_george=gp_george, var_gp=var_gp,
+                             var_gp_george=var_gp_george, freq_idxs=freq_idxs,
                              log10_rho_priors=log10_rho_priors,
                              spectrum=spectra)
         self.ceffyl_gp = ceffyl_gp
@@ -562,7 +576,7 @@ class ceffylGPSampler():
             logl = ceffyl_gp.ln_likelihood_powerlaw_test
         elif analysis_type == 'holo_spectra':
             logl = ceffyl_gp.holospectrum_lnlikelihood
-        elif  analysis_type == 'gp':
+        elif analysis_type == 'gp':
             logl = ceffyl_gp.ln_likelihood
         else:
             print("Please choose between 'test', 'holo_spectra', and 'gp'\n")
@@ -635,9 +649,9 @@ if __name__ == '__main__':
 
     # set up sampler!
     sampler = ceffylGPSampler(trainedGPdir=trainedGPdir, spectradir=spectradir,
-                                ceffyldir=ceffyldir, hyperparams=hyperparams,
-                                Nfreqs=Nfreqs, outdir=outdir,
-                                analysis_type='holo_spectra', jump=True)
+                              ceffyldir=ceffyldir, hyperparams=hyperparams,
+                              Nfreqs=Nfreqs, outdir=outdir,
+                              analysis_type='holo_spectra', jump=True)
     
     print('Here are your parameters...\n')
     print(sampler.ceffyl_gp.param_names)
