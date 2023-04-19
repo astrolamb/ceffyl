@@ -108,6 +108,7 @@ class signal():
             self.selected_psrs = selected_psrs
             self.N_psrs = len(selected_psrs)
 
+            """
             for p in params:
                 if p.size is not None:
                     print('single pulsars with varying parameters for each ' +
@@ -115,9 +116,19 @@ class signal():
                     return
                 else:
                     size = 1
+            """
 
-            self.param_names = [f'{q}_{name}_{p.name}' for q in
-                                selected_psrs for p in params]
+            param_names = []
+            for p in params:
+                if p.size is None or p.size == 1:
+                    param_names.extend([f'{q}_{name}_{p.name}' for q in
+                                        selected_psrs])
+                else:
+                    param_names.extend([f'{q}_{name}_{p.name}_{ii}'
+                                        for q in selected_psrs
+                                        for ii in range(p.size)])
+
+            self.param_names = param_names
             self.N_params = len(self.param_names)
             self.params = params*self.N_psrs
             # tuple to reshape xs for vectorised computation
@@ -289,10 +300,20 @@ class ceffyl():
 
             else:
                 id_irn = id
-                for ii in range(len(s.psd_priors)):
-                    pmap.append(list(np.arange(id_irn+ii, id+s.N_params,
-                                               s.N_priors)))
-                id += s.N_params
+                for ii, p in enumerate(s.psd_priors):
+                    if p.size is None or p.size == 1:
+                        pmap.append(list(np.arange(id_irn+ii, id+s.N_params,
+                                                   s.N_priors)))
+                        id += s.N_params
+                    else:
+                        if len(s.psd_priors) > 1:
+                            print("Sorry, ceffyl can't manage more than one" +
+                                  " parameter if a parameter has size > 1")
+                            return TypeError
+                        else:
+                            npsr = len(s.selected_psrs)
+                            array = np.arange(id_irn+ii, id+npsr*p.size)
+                            pmap.extend(list(array.reshape(npsr, p.size)))
                 s.pmap = pmap
 
         # create list of idx grids
