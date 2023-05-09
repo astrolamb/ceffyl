@@ -12,12 +12,7 @@ from enterprise.signals import parameter
 from enterprise_extensions import sampler
 from ceffyl import Ceffyl, models
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
-#from holodeck.gps import gp_utils
-import sys
-sys.path.append('/home/lambwg/holodeck/holodeck/gps/')
-import gp_utils
-sys.path.append('/home/lambwg/ng15yr_astro_interp/train_gps/')
-import gp_utils_og
+from holodeck.gps import gp_utils
 
 from scipy.special import logsumexp
 from enterprise.signals import gp_priors
@@ -345,6 +340,7 @@ class ceffylGP():
         self.samples = samples[~nan_ind]
         
         # create interpolation
+        # FIX ME: is this the most optimised interpolant?
         tri = Delaunay(self.samples)
         interpolator = LinearNDInterpolator(tri, self.gwb_spectra)
         self.interpolator = interpolator
