@@ -12,7 +12,13 @@ from enterprise.signals import parameter
 from enterprise_extensions import sampler
 from ceffyl import Ceffyl, models
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
-from holodeck.gps import gp_utils
+#from holodeck.gps import gp_utils
+import sys
+sys.path.append('/home/lambwg/holodeck/holodeck/gps/')
+import gp_utils
+sys.path.append('/home/lambwg/ng15yr_astro_interp/train_gps/')
+import gp_utils_og
+
 from scipy.special import logsumexp
 from enterprise.signals import gp_priors
 from scipy.interpolate import LinearNDInterpolator
@@ -522,7 +528,7 @@ class ceffylGPSampler():
             with open(trainedGP, "rb") as f:  # load GaussProc objects
                 gp_george = pickle.load(f)  # this is not a list of George objects
 
-            # set up list of GP George objects
+            # set up list of GaussProc objects
             gp = gp_utils.set_up_predictions(spectra, gp_george)
         else:
             gp, gp_george = None, None
