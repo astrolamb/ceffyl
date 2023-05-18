@@ -4,35 +4,69 @@ from emcee.autocorr import integrated_time
 import numpy as np
 import matplotlib.pyplot as plt
 
-def chain_utils(chaindir=None, corepath=None):
+def read_data(chaindir=None, corepath=None, core=None, pars=None):
     """
-    utility function to plot important info about chains
+    function to read_data and return a np array of chosen pars
     """
     # load the chain
-    chain = co.Core(chaindir) if chaindir else co.Core(corepath=corepath)
+    if chaindir:
+        core = co.Core(chaindir)
+    elif corepath:
+        core = co.Core(corepath=corepath)
+    elif core:
+        core = core
+    else:
+        print('Gimme some data to chew on')
+        return
+    
+    if pars is None:  # set params is none
+        pars = core.params[:-4]
+    
+    return core, pars
 
-    # list param names
-    print(f'These are your {len(chain.params[:-4])} parameters:\n{chain.params[:-4]}\n')
-
-    # plot traceplots
-    dg.plot_chains(chain, hist=False)
-
-    # calculate and plot grubin
-    Rhat, idx = dg.grubin(chain)
-    print(f'Min/max Gelman-Rubin tests: {min(Rhat), max(Rhat)}\n')
-    if idx.any():
-        print(f'Undersampled parameters: {np.array(chain.params)[idx]}\n')
-    dg.plot_grubin(chain)
-
-    # plot histograms of parameters
-    dg.plot_chains(chain)
-
+def print_info(core):
+    """
+    print chain diagnostics from cores
+    """
     # calculate and plot ACLs
-    acls = np.array([integrated_time(chain(p)) for p in chain.params[:-4]])
-    print(f'Min/max Gelman-Rubin tests: {min(acls), max(acls)}\n')
-    plt.scatter(np.arange(len(chain.params[:-4])), acls)
+    acls = np.array([integrated_time(core(p), quiet=True)
+                     for p in core.params[:-4]])
+    
+    # calculate grubin
+    Rhat, idx = dg.grubin(core)
+    print(f'Min/max Gelman-Rubin tests: {np.min(Rhat), np.max(Rhat)}\n')
+    
+    if idx.any():
+        print(f'Undersampled parameters: {np.array(core.params)[idx]}\n')
+
+    print(f'Min/max autocorrelation lengths: {np.min(acls), np.max(acls)}\n')
+    plt.scatter(np.arange(len(core.params[:-4])), acls)
     plt.xlabel('Param idx')
     plt.ylabel('ACL')
     plt.title('Autocorrelation length');
+    
+    return
 
-    return chain
+
+def chain_utils(chaindir=None, corepath=None,
+                core=None, pars=None):
+    """
+    utility function to plot important info about chains
+    """
+    
+    # read data
+    core, pars = read_data(chaindir=chaindir, corepath=corepath,
+                            core=core, pars=pars)
+
+    # list param names
+    print(f'These are your {len(pars)} parameters:\n{pars}\n')
+
+    dg.plot_chains(core, hist=False, pars=pars)  # plot traceplots
+
+    dg.plot_chains(core, pars=pars)  # plot histograms of parameters
+    
+    dg.plot_grubin(core)  # plot grubin
+    
+    print_info(core)  # print chain diagnostics
+
+    return core

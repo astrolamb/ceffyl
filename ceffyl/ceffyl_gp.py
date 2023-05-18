@@ -306,13 +306,14 @@ class ceffylGP():
         self.ceffyl_pta = ceffyl_pta  # save ceffyl object
         
         self.Tspan = 1/ceffyl_pta.freqs[0]  # PTA frequencies being searched
-        self.freqs = ceffyl_pta.freqs[:Nfreqs]  # save frequencies
 
         # save rho grid
         # rho_mask = (self.ceffyl_pta.rho_grid > log10_rho_priors[0] and 
         #            self.ceffyl_pta.rho_grid < log10_rho_priors[1])
         rho_grid = self.ceffyl_pta.rho_grid
-        self.rho_grid = np.repeat([rho_grid], repeats=Nfreqs,
+        
+        num_freq = len(freq_idxs) if freq_idxs is not None else Nfreqs
+        self.rho_grid = np.repeat([rho_grid], repeats=num_freq,
                                   axis=0)  # save freespec probability grid
 
         # saving locations of constant hyperparams
@@ -331,23 +332,30 @@ class ceffylGP():
         # saving params that can be sampled (i.e. no constant values)
         self.params = list(self.hypervar)
 
-        self.ln_freespec = ceffyl_pta.density[0, :self.Nfreqs]
+        if freq_idxs is not None:
+            self.ln_freespec = ceffyl_pta.density[0, freq_idxs]
+            self.freqs = ceffyl_pta.freqs[freq_idxs]  # save frequencies
+        else:
+            self.ln_freespec = ceffyl_pta.density[0, :self.Nfreqs]
+            self.freqs = ceffyl_pta.freqs[:Nfreqs]  # save frequencies
         
         # saving parameter names
         env_names = [p.name for p in self.hypervar]
         self.param_names = env_names
 
-        gwb_spectra = np.array(spectrum['gwb'])[:, :Nfreqs]
-        samples = np.array(spectrum['sample_params'])
+        if Nfreqs is None:
+            print('cannot use interpolation at the moment with manual freq input')
+            gwb_spectra = np.array(spectrum['gwb'])[:, :Nfreqs]
+            samples = np.array(spectrum['sample_params'])
 
-        nan_ind = np.any(np.isnan(gwb_spectra), axis=(1, 2))
-        self.gwb_spectra = gwb_spectra[~nan_ind]
-        self.samples = samples[~nan_ind]
-        
-        # create interpolation
-        tri = Delaunay(self.samples)
-        interpolator = LinearNDInterpolator(tri, self.gwb_spectra)
-        self.interpolator = interpolator
+            nan_ind = np.any(np.isnan(gwb_spectra), axis=(1, 2))
+            self.gwb_spectra = gwb_spectra[~nan_ind]
+            self.samples = samples[~nan_ind]
+
+            # create interpolation
+            tri = Delaunay(self.samples)
+            interpolator = LinearNDInterpolator(tri, self.gwb_spectra)
+            self.interpolator = interpolator
         
         return
         
@@ -535,8 +543,12 @@ class ceffylGPSampler():
 
         if gp is not None and gp_george is not None:
             if Nfreqs is None:
-                gp_george = list(np.array(gp_george)[freq_idxs])
-                gp = list(np.array(gp)[freq_idxs])
+                gp_george = np.array(gp_george)[freq_idxs].tolist()
+                
+                gp_list = []  # GPGeorge behaves weirdly with np arrays
+                for idx in freq_idxs:
+                    gp_list.append(gp[idx])
+                gp = gp_list
             else:
                 gp_george = gp_george[:Nfreqs]
                 gp = gp[:Nfreqs]
@@ -553,7 +565,11 @@ class ceffylGPSampler():
         if var_gp is not None and var_gp_george is not None:
             if Nfreqs is None:
                 var_gp_george = list(np.array(var_gp_george)[freq_idxs])
-                var_gp = list(np.array(var_gp)[freq_idxs])
+                
+                var_gp_list = []  # GPGeorge behave weirdly with np arrays
+                for idx in freq_idxs:
+                    var_gp_list.append(var_gp[idx])
+                var_gp = var_gp_list
             else:
                 var_gp_george = var_gp_george[:Nfreqs]
                 var_gp = var_gp[:Nfreqs]
