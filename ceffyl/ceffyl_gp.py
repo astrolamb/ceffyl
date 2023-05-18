@@ -330,29 +330,30 @@ class ceffylGP():
         if freq_idxs is not None:
             self.ln_freespec = ceffyl_pta.density[0, freq_idxs]
             self.freqs = ceffyl_pta.freqs[freq_idxs]  # save frequencies
+            gwb_spectra = np.array(spectrum['gwb'])[:, freq_idxs]
         else:
             self.ln_freespec = ceffyl_pta.density[0, :self.Nfreqs]
             self.freqs = ceffyl_pta.freqs[:Nfreqs]  # save frequencies
+            gwb_spectra = np.array(spectrum['gwb'])[:, :Nfreqs]
+        
+        # clean the spectra
+        nan_ind = np.any(np.isnan(gwb_spectra), axis=(1, 2))
+        self.gwb_spectra = gwb_spectra[~nan_ind]
+        
+        samples = np.array(spectrum['sample_params'])
+        self.samples = samples[~nan_ind]
         
         # saving parameter names
         env_names = [p.name for p in self.hypervar]
         self.param_names = env_names
 
-        if Nfreqs is None:
+        if freq_idxs is not None:
             print('cannot use interpolation at the moment with manual freq input')
-            gwb_spectra = np.array(spectrum['gwb'])[:, :Nfreqs]
-            samples = np.array(spectrum['sample_params'])
-
-<<<<<<< HEAD
-            nan_ind = np.any(np.isnan(gwb_spectra), axis=(1, 2))
-            self.gwb_spectra = gwb_spectra[~nan_ind]
-            self.samples = samples[~nan_ind]
-
             # create interpolation
             tri = Delaunay(self.samples)
             interpolator = LinearNDInterpolator(tri, self.gwb_spectra)
             self.interpolator = interpolator
-=======
+
         nan_ind = np.any(np.isnan(gwb_spectra), axis=(1, 2))
         self.gwb_spectra = gwb_spectra[~nan_ind]
         self.samples = samples[~nan_ind]
@@ -362,7 +363,6 @@ class ceffylGP():
         tri = Delaunay(self.samples)
         interpolator = LinearNDInterpolator(tri, self.gwb_spectra)
         self.interpolator = interpolator
->>>>>>> ae477a1730de4a50746e333c2456bf1bb002527b
         
         return
         
