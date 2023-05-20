@@ -265,7 +265,7 @@ class ceffylGP():
     A class to fit GP to PTA free spectrum via ceffyl
     """
     def __init__(self, datadir, hyperparams, gp, gp_george, var_gp,
-                 var_gp_george, spectrum, Nfreqs=None, freq_idxs=None,
+                 var_gp_george, spectrum=None, Nfreqs=None, freq_idxs=None,
                  log10_rho_priors=[-10, -6]):
         """
         Initialise the class
@@ -330,39 +330,35 @@ class ceffylGP():
         if freq_idxs is not None:
             self.ln_freespec = ceffyl_pta.density[0, freq_idxs]
             self.freqs = ceffyl_pta.freqs[freq_idxs]  # save frequencies
-            gwb_spectra = np.array(spectrum['gwb'])[:, freq_idxs]
         else:
             self.ln_freespec = ceffyl_pta.density[0, :self.Nfreqs]
             self.freqs = ceffyl_pta.freqs[:Nfreqs]  # save frequencies
-            gwb_spectra = np.array(spectrum['gwb'])[:, :Nfreqs]
-        
-        # clean the spectra
-        nan_ind = np.any(np.isnan(gwb_spectra), axis=(1, 2))
-        self.gwb_spectra = gwb_spectra[~nan_ind]
-        
-        samples = np.array(spectrum['sample_params'])
-        self.samples = samples[~nan_ind]
         
         # saving parameter names
         env_names = [p.name for p in self.hypervar]
         self.param_names = env_names
 
-        if freq_idxs is not None:
+        # block for spectrum library interpolation
+        # FIX ME: apply to specific, chosen freq bins
+        # FIX ME: can you optimise interpolation?
+        if freq_idxs is not None and spectrum is not None:
             print('cannot use interpolation at the moment with manual freq input')
+            
+            gwb_spectra = np.array(spectrum['gwb'])[:, :Nfreqs]
+            
+            # clean the spectra
+            nan_ind = np.any(np.isnan(gwb_spectra), axis=(1, 2))
+            self.gwb_spectra = gwb_spectra[~nan_ind]
+
+            samples = np.array(spectrum['sample_params'])
+            self.samples = samples[~nan_ind]
+            
             # create interpolation
             tri = Delaunay(self.samples)
             interpolator = LinearNDInterpolator(tri, self.gwb_spectra)
             self.interpolator = interpolator
-
-        nan_ind = np.any(np.isnan(gwb_spectra), axis=(1, 2))
-        self.gwb_spectra = gwb_spectra[~nan_ind]
-        self.samples = samples[~nan_ind]
-        
-        # create interpolation
-        # FIX ME: is this the most optimised interpolant?
-        tri = Delaunay(self.samples)
-        interpolator = LinearNDInterpolator(tri, self.gwb_spectra)
-        self.interpolator = interpolator
+        else:
+            self.spectrum = None
         
         return
         
@@ -508,10 +504,11 @@ class ceffylGPSampler():
     """
     A class to quickly set-up ceffylGP and sample!
     """
-    def __init__(self, trainedGP, trained_varGP, spectrafile, ceffyldir,
-                 hyperparams, outdir, resume=True, Nfreqs=None, freq_idxs=None,
-                 log10_rho_priors=[-10., -5.9], jump=True, analysis_type='gp',
-                 test_sigma=0.01):
+    def __init__(self, trainedGP, trained_varGP, ceffyldir,
+                 hyperparams, outdir, spectrafile=None,
+                 resume=True, Nfreqs=None, freq_idxs=None,
+                 log10_rho_priors=[-10., -5.9], jump=True,
+                 analysis_type='gp', test_sigma=0.01):
         """
         Initialise the class!
 
@@ -536,7 +533,11 @@ class ceffylGPSampler():
                            if test==True
         """
 
-        spectra = h5py.File(spectrafile)  # open spectra file
+        # load spectra is file provided
+        if spectrafile is not None:
+            spectra = h5py.File(spectrafile)  # open spectra file
+        else:
+            spectra = None  # not needed for most runs
 
         # Load trained GPs
         if trainedGP is not None:
