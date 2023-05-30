@@ -39,8 +39,19 @@ def print_info(core):
     if idx.any():
         print(f'Undersampled parameters: {np.array(core.params)[idx]}\n')
 
+<<<<<<< HEAD
     print(f'Min/max autocorrelation lengths: {np.min(acls), np.max(acls)}\n')
     plt.scatter(np.arange(len(core.params[:-4])), acls)
+=======
+    # plot histograms of parameters
+    dg.plot_chains(chain)
+
+    # calculate and plot ACLs
+    acls = np.array([integrated_time(chain(p)) for p in chain.params[:-4]],
+                    quiet=True)
+    print(f'Min/max Gelman-Rubin tests: {min(acls), max(acls)}\n')
+    plt.scatter(np.arange(len(chain.params[:-4])), acls)
+>>>>>>> 08881cf37eac787bcb61c63d09c20373953541c0
     plt.xlabel('Param idx')
     plt.ylabel('ACL')
     plt.title('Autocorrelation length');

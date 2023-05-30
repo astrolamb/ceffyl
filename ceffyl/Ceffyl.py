@@ -108,6 +108,7 @@ class signal():
             self.selected_psrs = selected_psrs
             self.N_psrs = len(selected_psrs)
 
+            """
             for p in params:
                 if p.size is not None:
                     print('single pulsars with varying parameters for each ' +
@@ -115,9 +116,19 @@ class signal():
                     return
                 else:
                     size = 1
+            """
 
-            self.param_names = [f'{q}_{name}_{p.name}' for q in
-                                selected_psrs for p in params]
+            param_names = []
+            for p in params:
+                if p.size is None or p.size == 1:
+                    param_names.extend([f'{q}_{name}_{p.name}' for q in
+                                        selected_psrs])
+                else:
+                    param_names.extend([f'{q}_{name}_{p.name}_{ii}'
+                                        for q in selected_psrs
+                                        for ii in range(p.size)])
+
+            self.param_names = param_names
             self.N_params = len(self.param_names)
             self.params = params*self.N_psrs
             # tuple to reshape xs for vectorised computation
@@ -136,7 +147,7 @@ class signal():
         @return logpdf: summed logpdf of proposed parameter
         """
         return np.array([p.get_logpdf(x)  # require 2 x sum of list of arrays
-                         for p, x in zip(self.psd_priors, xs)]).sum().sum()
+                         for p, x in zip(self.params, xs)]).sum().sum()
 
     def get_rho(self, freqs, mapped_xs, Tspan):
         """
@@ -289,10 +300,21 @@ class ceffyl():
 
             else:
                 id_irn = id
-                for ii in range(len(s.psd_priors)):
-                    pmap.append(list(np.arange(id_irn+ii, id+s.N_params,
-                                               s.N_priors)))
-                id += s.N_params
+                for ii, p in enumerate(s.psd_priors):
+                    if p.size is None or p.size == 1:
+                        pmap.append(list(np.arange(id_irn+ii, id+s.N_params,
+                                                   s.N_priors)))
+                        id += s.N_params
+                    else:
+                        if len(s.psd_priors) > 1:
+                            print("Sorry, ceffyl can't manage more than one" +
+                                  " parameter if a parameter has size > 1")
+                            return TypeError
+                        else:
+                            npsr = len(s.selected_psrs)
+                            array = np.arange(id_irn+ii, id+npsr*p.size)
+                            pmap.extend(list(array.reshape(npsr, p.size)))
+                            id += npsr * p.size
                 s.pmap = pmap
 
         # create list of idx grids
@@ -312,13 +334,19 @@ class ceffyl():
         # information for nested sampling
         posterior_samples, hist_cumulative, binmid = [], [], []
         for s in self.signals:  # iterate through signals
-            for ii, p in enumerate(s.pmap):
-                posterior_samples = [s.psd_priors[ii].sample() for jj in
-                                     range(nested_posterior_sample_size)]
-                hist, bin_edges = np.histogram(posterior_samples,
-                                               bins='fd')
-                hist_cumulative.append(np.cumsum(hist/hist.sum()))
-                binmid.append((bin_edges[:-1] + bin_edges[1:])/2)
+            if binmid is None:
+                for ii, p in enumerate(s.params):
+                    if p.size is None or p.size == 1:
+                        posterior_samples = [s.psd_priors[ii].sample() for jj in
+                                            range(nested_posterior_sample_size)]
+                        hist, bin_edges = np.histogram(posterior_samples,
+                                                    bins='fd')
+                        hist_cumulative.append(np.cumsum(hist/hist.sum()))
+                        binmid.append((bin_edges[:-1] + bin_edges[1:])/2)
+                    else:
+                        # FIX ME: nested sampling for free spec irn
+                        print('Free spectrum not supported with nested sampling yet!')
+                        hist_cumulative, binmid = None, None
 
         self.hist_cumulative = hist_cumulative
         self.binmid = binmid
@@ -403,7 +431,7 @@ class ceffyl():
         for s in self.signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_xs = {s_i.name: xs[p]
-                         for p, s_i in zip(s.pmap, s.psd_priors)}
+                         for p, s_i in zip(s.pmap, s.params)}
             rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
                                        Tspan=self.Tspan, mapped_xs=mapped_xs)
 
