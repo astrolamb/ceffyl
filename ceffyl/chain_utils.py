@@ -28,7 +28,8 @@ def chain_utils(chaindir=None, corepath=None):
     dg.plot_chains(chain)
 
     # calculate and plot ACLs
-    acls = np.array([integrated_time(chain(p)) for p in chain.params[:-4]])
+    acls = np.array([integrated_time(chain(p)) for p in chain.params[:-4]],
+                    quiet=True)
     print(f'Min/max Gelman-Rubin tests: {min(acls), max(acls)}\n')
     plt.scatter(np.arange(len(chain.params[:-4])), acls)
     plt.xlabel('Param idx')
