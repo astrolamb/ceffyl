@@ -487,3 +487,30 @@ class ceffyl():
         """
         x0 = np.hstack([s.sample() for s in self.signals])
         return x0
+
+# TEST ----------------------------------------------------
+if __name__=='__main__':
+    from ceffyl import Sampler
+
+    pta = ceffyl('../data/sim51/GFL_sim51/')  # let's run a GFL free spec irn
+    psrs = pta.pulsar_list                    # list of pulsars
+
+    # define freespec parameter
+    log10_rho = Uniform(-15, -1., size=10)('log10_rho')
+
+    # add signals to ceffyl
+    irn = signal(N_freqs=10, selected_psrs=psrs, psd=models.free_spectrum,
+                 params=[log10_rho], common_process=False, name='red_noise')
+    gw = signal(N_freqs=10, psd=models.free_spectrum, params=[log10_rho])
+    pta.add_signals([irn, gw])
+
+    x0 = pta.initial_samples()  # get random initial samples
+
+    # set up sampler
+    sampler = Sampler.setup_sampler(pta,
+                                    outdir='./test/gfl_fs10fCP_fs10fIRN',
+                                    logL=pta.ln_likelihood,
+                                    logp=pta.ln_prior,
+                                    jump=False)
+    
+    sampler.sample(x0, 500000)  # sample!
