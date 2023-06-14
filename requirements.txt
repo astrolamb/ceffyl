@@ -1,5 +1,4 @@
 acor==1.1.1
-ceffyl.egg==info
 Cython==0.29.33
 enterprise==0.4.2
 enterprise_extensions==2.4.2
