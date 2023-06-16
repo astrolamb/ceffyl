@@ -449,8 +449,9 @@ def setup_sampler(ceffyl, outdir, logL, logp, resume=True, jump=True,
                      loglkwargs=loglkwargs, logpkwargs=logpkwargs,
                      groups=groups, **ptmcmc_kwargs)
 
-    # save parameter names
+    # save parameter names and priors
     np.savetxt(outdir+'/pars.txt', ceffyl.param_names, fmt='%s')
+    np.savetxt(outdir+'/priors.txt', ceffyl.params, fmt='%s')
 
     # PT swap jump proposals
     if jump:
