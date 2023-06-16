@@ -19,7 +19,7 @@ class signal():
     def __init__(self, N_freqs=None, freq_idxs=None, selected_psrs=None,
                  psd=models.powerlaw, params=[Uniform(-18, -12)('log10_A'),
                                               Uniform(0, 7)('gamma')],
-                 const_params={}, common_process=True, name='gw',
+                 const_params={}, common_process=True, name='_gw',
                  psd_kwargs={}):
         """
         Initialise a signal class to model intrinsic red noise or a common
@@ -89,9 +89,9 @@ class signal():
             param_names = []
             for p in params:
                 if p.size is None or p.size == 1:
-                    param_names.append(f'{p.name}_{name}')
+                    param_names.append(f'{p.name}{name}')
                 else:
-                    param_names.extend([f'{p.name}_{ii}_{name}'
+                    param_names.extend([f'{p.name}_{ii}{name}'
                                         for ii in range(p.size)])
 
             self.param_names = param_names
@@ -116,7 +116,7 @@ class signal():
                 else:
                     size = 1
 
-            self.param_names = [f'{q}_{name}_{p.name}' for q in
+            self.param_names = [f'{q}{name}_{p.name}' for q in
                                 selected_psrs for p in params]
             self.N_params = len(self.param_names)
             self.params = params*self.N_psrs
