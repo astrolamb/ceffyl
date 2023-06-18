@@ -304,6 +304,7 @@ class ceffyl():
 
         # save complete array of parameters
         self.param_names = list(np.hstack([s.param_names for s in signals]))
+        self.params = list(np.hstack([s.params for s in signals]))
         self.ndim = len(self.param_names)
 
         # setup empty 2d grid to vectorize product of pdfs
