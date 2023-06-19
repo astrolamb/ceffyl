@@ -1,4 +1,5 @@
 # ceffyl
+[![PyPI version](https://badge.fury.io/py/ceffyl.svg)](https://badge.fury.io/py/ceffyl)
 [![DOI](https://zenodo.org/badge/474781623.svg)](https://zenodo.org/badge/latestdoi/474781623)
 
 Pronounced /ˈkɛfɨ̞l/ **('keff-ill')**, meaning 'horse' in Cymraeg/Welsh 🏴󠁧󠁢󠁷󠁬󠁳󠁿🐎 
@@ -9,14 +10,7 @@ This can be done by fitting to a free spectrum of the entire PTA or to individua
 
 ## Installation
 
-To install via `pip`, some non-python dependencies are required. You can find these in [requirements.txt](https://github.com/astrolamb/ceffyl/edit/main/README.md#:~:text=README.md-,requirements,-.txt)
-
-First, clone the repo
-```bash
-git clone git@github.com:astrolamb/ceffyl.git
-```
-
-Then pip install :)
+To install via `pip', simply use PyPi:
 ```bash
 pip install ceffyl
 ```
