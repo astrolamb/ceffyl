@@ -12,7 +12,12 @@ from enterprise.signals import parameter
 from enterprise_extensions import sampler
 from ceffyl import Ceffyl, models
 from PTMCMCSampler.PTMCMCSampler import PTSampler as ptmcmc
-from holodeck.gps import gp_utils
+
+try:  # attempt to import holodeck
+    from holodeck.gps import gp_utils
+except ImportError:
+    print('Holodeck is required to run ceffylGP. Please install:\n')
+    print('https://github.com/nanograv/holodeck')
 
 from scipy.special import logsumexp
 from enterprise.signals import gp_priors
