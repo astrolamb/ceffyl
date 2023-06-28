@@ -1,0 +1,16 @@
+Date created:time.struct_time(tm_year=2023, tm_mon=6, tm_mday=23, tm_hour=12, tm_min=26, tm_sec=14, tm_wday=4, tm_yday=174, tm_isdst=1)
+la-forge cores: ['/data/taylor_group/IPTA/published_chains/iptadr2-free_spec_CP/ipta_dr2_fs_crn.core']
+KDE function: FFTKDE
+KDE kernel choice: epanechnikov
+Bandwidth choice: <function sj at 0x2b5ad5d4d430>
+Bandwidth values: [0.02379666 0.00911797 0.00628694 0.02022295 0.0060276  0.01652353
+ 0.01618904 0.00636734 0.01448855 0.01182644 0.01152338 0.01212293
+ 0.01180873 0.01344625 0.01474775 0.01565843 0.01230207 0.00881926
+ 0.01064267 0.01210985 0.01347709 0.00968208 0.00608532 0.01241665
+ 0.01136811 0.0125521  0.0123604  0.00841536 0.0162689  0.02050027]
+log10rho grid: [-8.99998457 -8.99960289 -8.99922122 ... -5.18439231 -5.18401064
+ -5.18362896]
+Thin chain for KDE? False
+Thin chain for bandwidth? False
+Bootstrap? False
+Number of bootstrapped samples: None
