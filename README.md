@@ -18,11 +18,19 @@ pip install ceffyl
 ## data
 Download representations of PTA data to accurately fit spectral models with ceffyl!
 
-- [NANOGrav 12.5-year data set](https://nanograv.org/science/data/nanograv-125y-kde-representation-ceffyl)
+- NANOGrav 12.5-year data set
+    - [PTA free spectrum refit data](https://nanograv.org/science/data/nanograv-125y-kde-representation-ceffyl)
 
 ## examples
 
-Do you just want fit your models really quickly? Find examples [in this directory!](https://github.com/astrolamb/ceffyl/tree/main/examples)
+- [**PTA free spectrum refit example**](https://github.com/astrolamb/ceffyl/blob/main/examples/PTA_freespec_ex1.ipynb)
+    - This is the **fastest** and **most accurate** refit technique. Fit any GWB spectrum that you'd like in < 5 minutes!
+    
+- [**GFL Lite refit example**](https://github.com/astrolamb/ceffyl/blob/main/examples/gfl_lite_ex2.ipynb)
+    - Fit GWB models quickly and accurately to different combinations of pulsars!
+    
+- [**GFL refit example**](https://github.com/astrolamb/ceffyl/blob/main/examples/gfl_ex3.ipynb)
+    - Fit GWB and custom intrinsic red noise models to different pulsars quickly! **Experimental** - use with caution!
 
 Do you have your own free spectrum posteriors that you want to work in ceffyl? Learn about making your own KDE posteriors [here](https://github.com/astrolamb/ceffyl/tree/main/examples)
 
