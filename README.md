@@ -19,7 +19,7 @@ pip install ceffyl
 Download representations of PTA data to accurately fit spectral models with ceffyl!
 
 - **IPTA DR2** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5787557.svg)](https://doi.org/10.5281/zenodo.5787557)
-    - [PTA free spectrum refit data (zipped)](https://github.com/astrolamb/ceffyl/tree/main/data/IPTA_DR2)
+    - [PTA free spectrum refit data](https://github.com/astrolamb/ceffyl/tree/main/data/IPTA_DR2)
 
 - **NANOGrav 12.5-year data set** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4312297.svg)](https://doi.org/10.5281/zenodo.4312297)
     - [PTA free spectrum refit data (zipped)](https://nanograv.org/science/data/nanograv-125y-kde-representation-ceffyl)
