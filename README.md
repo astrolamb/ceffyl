@@ -15,9 +15,16 @@ To install via `pip', simply use PyPi:
 pip install ceffyl
 ```
 
+## data
+Download representations of PTA data to accurately fit spectral models with ceffyl!
+
+- [NANOGrav 12.5-year data set](https://nanograv.org/science/data/nanograv-125y-kde-representation-ceffyl)
+
 ## examples
 
-Find [examples](https://github.com/astrolamb/ceffyl/tree/main/examples) on how to create KDE representations of free spectra, and how to fit your data to your chosen data sets, [in this directory!](https://github.com/astrolamb/ceffyl/tree/main/examples)
+Do you just want fit your models really quickly? Find examples [in this directory!](https://github.com/astrolamb/ceffyl/tree/main/examples)
+
+Do you have your own free spectrum posteriors that you want to work in ceffyl? Learn about making your own KDE posteriors [here](https://github.com/astrolamb/ceffyl/tree/main/examples)
 
 ## Attribution
 
