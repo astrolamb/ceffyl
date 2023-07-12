@@ -1,4 +1,5 @@
 # ceffyl
+[![PyPI version](https://badge.fury.io/py/ceffyl.svg)](https://badge.fury.io/py/ceffyl)
 [![DOI](https://zenodo.org/badge/474781623.svg)](https://zenodo.org/badge/latestdoi/474781623)
 
 Pronounced /ˈkɛfɨ̞l/ **('keff-ill')**, meaning 'horse' in Cymraeg/Welsh 🏴󠁧󠁢󠁷󠁬󠁳󠁿🐎 
@@ -9,21 +10,35 @@ This can be done by fitting to a free spectrum of the entire PTA or to individua
 
 ## Installation
 
-To install via `pip`, some non-python dependencies are required. You can find these in [requirements.txt](https://github.com/astrolamb/ceffyl/edit/main/README.md#:~:text=README.md-,requirements,-.txt)
-
-First, clone the repo
-```bash
-git clone git@github.com:astrolamb/ceffyl.git
-```
-
-Then pip install :)
+To install via `pip', simply use PyPi:
 ```bash
 pip install ceffyl
 ```
 
+## data
+Download representations of PTA data to accurately fit spectral models with ceffyl!
+
+- 🆕 **NANOGrav 15-year data set** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8060824.svg)](https://doi.org/10.5281/zenodo.8060824)
+    - [PTA free spectrum refit data](https://zenodo.org/record/8060824)
+
+- **IPTA DR2** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5787557.svg)](https://doi.org/10.5281/zenodo.5787557)
+    - [PTA free spectrum refit data](https://github.com/astrolamb/ceffyl/tree/main/data/IPTA_DR2)
+
+- **NANOGrav 12.5-year data set** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4312297.svg)](https://doi.org/10.5281/zenodo.4312297)
+    - [PTA free spectrum refit data (zipped)](https://nanograv.org/science/data/nanograv-125y-kde-representation-ceffyl)
+
 ## examples
 
-Find [examples](https://github.com/astrolamb/ceffyl/tree/main/examples) on how to create KDE representations of free spectra, and how to fit your data to your chosen data sets, [in this directory!](https://github.com/astrolamb/ceffyl/tree/main/examples)
+- [**PTA free spectrum refit example**](https://github.com/astrolamb/ceffyl/blob/main/examples/PTA_freespec_ex1.ipynb)
+    - This is the **fastest** and **most accurate** refit technique. Fit any GWB spectrum that you'd like in < 5 minutes!
+    
+- [**GFL Lite refit example**](https://github.com/astrolamb/ceffyl/blob/main/examples/gfl_lite_ex2.ipynb)
+    - Fit GWB models quickly and accurately to different combinations of pulsars!
+    
+- [**GFL refit example**](https://github.com/astrolamb/ceffyl/blob/main/examples/gfl_ex3.ipynb)
+    - Fit GWB and custom intrinsic red noise models to different pulsars quickly! **Experimental** - use with caution!
+
+Do you have your own free spectrum posteriors that you want to work in ceffyl? Learn about making your own KDE posteriors [here](https://github.com/astrolamb/ceffyl/tree/main/examples)
 
 ## Attribution
 

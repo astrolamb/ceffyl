@@ -4,7 +4,7 @@ A class to create density estimators of pulsar timing array data
 
 import numpy as np
 from ceffyl.bw import bandwidths as bw
-import acor
+from emcee.autocorr import integrated_time
 import la_forge.core as co
 import glob
 import time
@@ -96,7 +96,7 @@ class DE_factory:
 
         # chain thinning using acor
         if thin_chain:
-            thin = round(acor.acor(data)[0])
+            thin = round(integrated_time(data)[0])
 
             if thin == 0:  # if acor=0, thinning will fail
                 thin = 1
@@ -143,7 +143,7 @@ class DE_factory:
 
         # chain thinning using acor
         if thin_chain:
-            thin = round(acor.acor(data)[0])
+            thin = round(integrated_time(data)[0])
 
             if thin == 0:  # if acor=0, thinning will fail
                 thin = 1
