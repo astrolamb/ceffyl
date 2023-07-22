@@ -9,7 +9,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='ceffyl',
-    version='1.26',
+    version='1.27',
     description=('Software to rapidly and flexibly analyse Pulsar Timing ' +
                  'Array data via the Generalised Factorised Likelihood (GFL)' +
                  'method'),
