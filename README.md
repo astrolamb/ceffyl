@@ -15,6 +15,11 @@ To install via `pip', simply use PyPi:
 pip install ceffyl
 ```
 
+To install via Anaconda:
+```bash
+conda install -c conda-forge ceffyl
+```
+
 ## data
 Download representations of PTA data to accurately fit spectral models with ceffyl!
 
