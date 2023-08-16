@@ -1,5 +1,6 @@
 # ceffyl
 [![PyPI version](https://badge.fury.io/py/ceffyl.svg)](https://badge.fury.io/py/ceffyl)
+[![conda-forge](https://anaconda.org/conda-forge/ceffyl/badges/version.svg)](https://anaconda.org/conda-forge/ceffyl/)
 [![DOI](https://zenodo.org/badge/474781623.svg)](https://zenodo.org/badge/latestdoi/474781623)
 
 Pronounced /ˈkɛfɨ̞l/ **('keff-ill')**, meaning 'horse' in Cymraeg/Welsh 🏴󠁧󠁢󠁷󠁬󠁳󠁿🐎 
