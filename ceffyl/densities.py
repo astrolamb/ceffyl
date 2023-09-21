@@ -173,14 +173,24 @@ class DE_factory:
             # reflect lower boundary
             if reflect:
                 lo_bound = rho_grid.min()
-                data = np.concatenate((data[::thin],
+                data2 = np.concatenate((data[::thin],
                                        2 * lo_bound - data[::thin]))
-                data = data[data >= lo_bound]
             else:
-                data = data[::thin]
+                data2 = data[::thin]
 
-            kde = kde.fit(data)  # fit data
-            density = kde.evaluate(rho_grid)
+            kde = kde.fit(data2)  # fit data
+            
+            # extend grid to encompass data
+            drho = rho_grid[1] - rho_grid[0]
+            rho_grid_ext = np.copy(rho_grid)
+
+            while rho_grid_ext.min() > data2.min():
+                newmin = rho_grid_ext[0] - drho
+                rho_grid_ext = np.insert(rho_grid_ext, 0, newmin)
+            
+            # evaluate data on rho grid
+            density = kde.evaluate(rho_grid_ext) * 2
+            density = density[rho_grid_ext >= -9.]
 
         if take_log:  # switch to take log pdf
             density = np.log(density)

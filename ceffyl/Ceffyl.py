@@ -150,8 +150,8 @@ class signal():
 
         @return logpdf: summed logpdf of proposed parameter
         """
-        return np.array([p.get_logpdf(x)  # require 2 x sum of list of arrays
-                         for p, x in zip(self.params, xs)]).sum().sum()
+        return sum([p.get_logpdf(x)  # require 2 x sum of list of arrays
+                    for p, x in zip(self.params, xs)]).sum().sum()
 
     def get_rho(self, freqs, mapped_xs, Tspan):
         """
@@ -256,7 +256,7 @@ class ceffyl():
 
         return
 
-    def add_signals(self, signals,
+    def add_signals(self, signals, nesting=False,
                     nested_posterior_sample_size=10000):
         """
         Method to add signals to the ceffyl object
@@ -306,9 +306,8 @@ class ceffyl():
                 id_irn = id
                 for ii, p in enumerate(s.psd_priors):
                     if p.size is None or p.size == 1:
-                        pmap.append(list(np.arange(id_irn+ii, id+s.N_params,
+                        pmap.append(list(np.arange(id_irn+ii, id_irn+s.N_params,
                                                    s.N_priors)))
-                        id += s.N_params
                     else:
                         if len(s.psd_priors) > 1:
                             print("Sorry, ceffyl can't manage more than one" +
@@ -316,9 +315,14 @@ class ceffyl():
                             return TypeError
                         else:
                             npsr = len(s.selected_psrs)
-                            array = np.arange(id_irn+ii, id+npsr*p.size)
+                            array = np.arange(id_irn+ii, id_irn+npsr*p.size)
                             pmap.extend(list(array.reshape(npsr, p.size)))
-                            id += npsr * p.size
+                            
+                if p.size is None or p.size == 1:
+                    id += s.N_params
+                else:
+                    id += npsr * p.size
+                
                 s.pmap = pmap
 
         # create list of idx grids
@@ -337,9 +341,10 @@ class ceffyl():
         self._I, self._J = np.ogrid[:self.N_psrs, :self.N_freqs]
 
         # information for nested sampling
-        posterior_samples, hist_cumulative, binmid = [], [], []
-        for s in self.signals:  # iterate through signals
-            if binmid is None:
+        if nesting:
+            posterior_samples, hist_cumulative, binmid = [], [], []
+            for s in self.signals:  # iterate through signals
+                #if binmid is None:
                 for ii, p in enumerate(s.params):
                     if p.size is None or p.size == 1:
                         posterior_samples = [s.psd_priors[ii].sample() for jj in
@@ -353,8 +358,8 @@ class ceffyl():
                         print('Free spectrum not supported with nested sampling yet!')
                         hist_cumulative, binmid = None, None
 
-        self.hist_cumulative = hist_cumulative
-        self.binmid = binmid
+            self.hist_cumulative = hist_cumulative
+            self.binmid = binmid
 
         return self
 
@@ -444,6 +449,8 @@ class ceffyl():
 
         # search for location of logrho values within grid
         idx = np.searchsorted(self.binedges, logrho) - 1
+        
+        idx[idx < 0] = 0  # if spectrum less than logrho, set to bottom boundary
 
         if (idx >= self.rho_grid.shape[0]).any():
             return -np.inf
