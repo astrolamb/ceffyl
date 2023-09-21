@@ -9,3 +9,4 @@ natsort==8.2.0
 numpy==1.23.5
 PTMCMCSampler==2.1.1
 scipy==1.10.0
+holodeck-gw==1.0
