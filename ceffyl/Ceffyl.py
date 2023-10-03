@@ -232,7 +232,7 @@ class ceffyl():
             binedges = rho_grid - 0.5*db
             binedges = np.append(binedges, binedges[-1]+0.5*db)
 
-            self.rho_grid, self.binedges = rho_grid, binedges
+            self.rho_grid, self.binedges, self.db = rho_grid, binedges, db
 
         # selected pulsars
         if pulsar_list is None:
