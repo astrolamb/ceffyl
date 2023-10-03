@@ -190,7 +190,7 @@ class DE_factory:
             
             # evaluate data on rho grid
             density = kde.evaluate(rho_grid_ext) * 2
-            density = density[rho_grid_ext >= -9.]
+            density = density[rho_grid_ext >= rho_grid.min()]
 
         if take_log:  # switch to take log pdf
             density = np.log(density)

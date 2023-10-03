@@ -256,7 +256,7 @@ class ceffyl():
 
         return
 
-    def add_signals(self, signals, nesting=False,
+    def add_signals(self, signals, inverse_transform=False,
                     nested_posterior_sample_size=10000):
         """
         Method to add signals to the ceffyl object
@@ -341,7 +341,7 @@ class ceffyl():
         self._I, self._J = np.ogrid[:self.N_psrs, :self.N_freqs]
 
         # information for nested sampling
-        if nesting:
+        if inverse_transform:
             posterior_samples, hist_cumulative, binmid = [], [], []
             for s in self.signals:  # iterate through signals
                 #if binmid is None:
@@ -425,6 +425,22 @@ class ceffyl():
                                  self.binmid[ii])
 
         return x
+    
+    def hypercube(self, xs):
+        """
+        function to compute ppf of the prior to use in nested sampling
+        REQUIRES: enterprise fork by vhaasteren:
+        git@github.com:vhaasteren/enterprise.git
+
+        @param xs: proposed value array
+        """
+
+        transformed_priors = np.empty_like(xs)  # initialise empty array
+
+        for ii, p in enumerate(self.params):  # iterate through signals
+            transformed_priors[ii] = p.ppf(xs[ii])
+
+        return transformed_priors
 
     def ln_likelihood(self, xs):
         """
@@ -456,6 +472,7 @@ class ceffyl():
             return -np.inf
         else:
             logpdf = self.density[self._I, self._J, idx]
+            logpdf += np.log(self.db)  # integration infinitessimal
             return np.sum(logpdf)
 
     """
