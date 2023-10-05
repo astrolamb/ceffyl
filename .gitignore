@@ -127,3 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# MCMC chain files
+.txt
+.npy
+.core
