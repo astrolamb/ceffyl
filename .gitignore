@@ -134,4 +134,4 @@ dmypy.json
 .core
 
 # ignore created .c file
-ceffyl/cbandwidths.c
+ceffyl/bw/cbandwidths.c
