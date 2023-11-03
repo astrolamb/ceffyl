@@ -12,7 +12,7 @@ import os
 import webbrowser
 from typing import Any
 from numpy.typing import NDArray
-from types import ModuleType
+from types import MethodType
 
 class signal():
     """
@@ -24,7 +24,7 @@ class signal():
                  N_freqs: int = None,
                  freq_idxs: list[int] = None,
                  selected_psrs: list[str] = None,
-                 psd: ModuleType = models.powerlaw,
+                 psd: MethodType = models.powerlaw,
                  params: list[Parameter] = [Uniform(-18, -12)('log10_A'),
                                             Uniform(0, 7)('gamma')],
                  const_params: dict[str, float] = {},
@@ -47,7 +47,7 @@ class signal():
             freq_idxs=[0,2,4,6,...]. To be specified when N_freqs=None
         selected_psrs : list[str], optional
             A list of names of the pulsars under this signal
-        psd : ModuleType
+        psd : MethodType
             Function to model a noise PSD for given set of frquencies and
             spectral characteristics
         params : list[Parameter]
@@ -256,10 +256,10 @@ class ceffyl():
         self.density = np.nan_to_num(density, nan=-36.)  # clean data
 
     def add_signals(self,
-                    signals: list[ModuleType],
+                    signals: list[MethodType],
                     inverse_transform: bool = False,
                     nested_posterior_sample_size: int = 100000
-                    ) -> ModuleType:
+                    ) -> MethodType:
         """
         Method to add signals to the ceffyl object.
         Note: using this method erases previous signals added to instance!
@@ -271,7 +271,7 @@ class ceffyl():
 
         Parameters
         ----------
-        signals : list[ModuleType]
+        signals : list[MethodType]
             list of Ceffyl.signal objects
         inverse_transform : bool
             flag to compute inverse transforms for use in nested samplers.
