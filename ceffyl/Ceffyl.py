@@ -1,66 +1,71 @@
 # imports
 import numpy as np
-from enterprise.signals.parameter import Uniform
+from enterprise.signals.parameter import Parameter, Uniform, function
 from ceffyl import models
 import os
 import webbrowser
+from typing import Any
+from numpy.typing import NDArray
+from types import ModuleType
 
 """
-Classes to create noise signals and a parallel tempered PTMCMCSampler object
+Classes to create noise signals and a parallel-tempered PTMCMCSampler object
 to fit spectra to a density estimation of pulsar timing array data
 """
 
 class signal():
     """
-    A class to add signals to the GFL
+    A class to add signals to Ceffyl...
     These signals can be a common process (GW) or individual to each pulsar
     (intrinsic red noise)
     """
-    def __init__(self, N_freqs=None, freq_idxs=None, selected_psrs=None,
-                 psd=models.powerlaw, params=[Uniform(-18, -12)('log10_A'),
-                                              Uniform(0, 7)('gamma')],
-                 const_params={}, common_process=True, name='gw_',
-                 psd_kwargs={}):
+    def __init__(self,
+                 N_freqs: int = None,
+                 freq_idxs: list[int] = None,
+                 selected_psrs: list[str] = None,
+                 psd: ModuleType = models.powerlaw,
+                 params: list[Parameter] = [Uniform(-18, -12)('log10_A'),
+                                            Uniform(0, 7)('gamma')],
+                 const_params: dict[str, float] = {},
+                 common_process: bool = True,
+                 name: str = 'gw_',
+                 psd_kwargs: dict[str, Any] = {}):
         """
         Initialise a signal class to model intrinsic red noise or a common
         process
 
-        //Inputs//
-        @param N_freqs: Number of frequencies for this signal. Expected to be
-                        equal or less than the number of frequencies used to
-                        preprocess data. This fits the first N_freqs
-                        frequencies to the data
+        Parameters
+        ----------
+        N_freqs : int, optional
+            Number of frequencies for this signal - fits to first N_freqs.
+            Expected to be equal or less than the number of frequencies used in
+            data file. To be specified when freq_idxs=None.
+        freq_idxs : list[int], optional
+            An array of indices of frequencies to fit to data. E.g. if you'd
+            like to fit data to every second frequency, set
+            freq_idxs=[0,2,4,6,...]. To be specified when N_freqs=None
+        selected_psrs : list[str], optional
+            A list of names of the pulsars under this signal
+        psd : ModuleType
+            Function to model a noise PSD for given set of frquencies and
+            spectral characteristics
+        params : list[Parameter]
+            List of parameter priors to be sampled
+        const_params : dict[str, float]
+            A dictionary of values to keep constant
+        common_process : bool
+            Is this a common process (e.g. GW signal) or not (e.g. instrinsic
+            pulsar red noise)?
+        name : str
+            What do you want to call your signal?
+        psd_kwargs : dict[str, Any]
+            A dictionary of kwargs for your selected PSD function
 
-        @param freq_idxs: an array of indices of frequencies to fit to data.
-                          This is an alternative to N_freqs. e.g. if you'd like
-                          to fit data to every second frequency, input
-                          freq_idxs=[0,2,4,6,...]
-
-        @param selected_psrs: A list of names of the pulsars under this signal.
-                              Expected to be a subset of pulsars within density
-                              array loaded in GFL class
-
-        @param psd: A function from enterprise.signals.gp_priors to model PSD
-                    for given set of frquencies and spectral characteristics
-
-        @param param: A list of parameters from enterprise.signals.gp_priors to
-                      vary. Parameters initialised with prior limits, prior
-                      distributions, and name corresponding to kwargs in psd
-
-        @param const_params: A dictionary of values to keep constant. Dictonary
-                             keys are kwargs for psd, values are floats
-
-        @param common_process: Is this a common process (e.g. GW signal) or not
-                               (e.g. instrinsic pulsar red noise)?
-
-        @param name: What do you want to call your signal? If you're using
-                      multiple signals, change this name each time!
-
-        @param psd_kwargs: A dictionary of kwargs for your selected PSD
-                           function)
-
+        Raises
+        ------
+        KeyError
+            if neither N_freqs or freq_idxs is set
         """
-
         # saving class information as properties
         if N_freqs is not None or freq_idxs is not None:
             if N_freqs is not None:
@@ -71,17 +76,17 @@ class signal():
                 self.N_freqs = len(freq_idxs)
 
         else:
-            print("Please give me some frequencies to search over...")
-            return
+            raise KeyError("Please give me some frequencies to search over...")
 
+        # saving metadata to class
         self.psd = psd
         self.psd_priors = params
         self.N_priors = len(params)
         self.const_params = const_params
         self.psd_kwargs = psd_kwargs
-        self.psr_idx = []  # to be save later in GFL class
+        self.psr_idx = []  # to be save later in Ceffyl class
 
-        # save information if signal is common to all pulsars
+        # save this information if signal is common to all pulsars
         if common_process:
             self.CP = True
             self.selected_psrs = selected_psrs
@@ -93,13 +98,13 @@ class signal():
                 else:
                     param_names.extend([f'{name}{p.name}_{ii}'
                                         for ii in range(p.size)])
-
             self.param_names = param_names
             self.N_params = len(param_names)
             self.params = params
+            self.length = len(params)
+
             # tuple to reshape xs for vectorised computation
             self.reshape = (1, 1, len(params))
-            self.length = len(params)
 
         # else save this information if signal is not common
         # it essentially multiplies lists across psrs for easy mapping
@@ -107,16 +112,6 @@ class signal():
             self.CP = False
             self.selected_psrs = selected_psrs
             self.N_psrs = len(selected_psrs)
-
-            """
-            for p in params:
-                if p.size is not None:
-                    print('single pulsars with varying parameters for each ' +
-                          'frequency is not yet supported')
-                    return
-                else:
-                    size = 1
-            """
 
             param_names = []
             for p in params:
@@ -127,56 +122,67 @@ class signal():
                     param_names.extend([f'{q}_{name}_{p.name}_{ii}'
                                         for q in selected_psrs
                                         for ii in range(p.size)])
-
             self.param_names = param_names
-
-            self.param_names = [f'{name}{q}_{p.name}' for q in
-                                selected_psrs for p in params]
-
             self.N_params = len(self.param_names)
             self.params = params*self.N_psrs
-            # tuple to reshape xs for vectorised computation
-            self.reshape = (1, len(selected_psrs),
-                            len(params))
             self.length = len(self.params)
 
-    def get_logpdf(self, xs):
+            # tuple to reshape xs for vectorised computation
+            self.reshape = (1, len(selected_psrs), len(params))
+
+    def get_logpdf(self, xs: NDArray) -> float:
         """
         A method to calculate total logpdf of proposed values
 
-        //Input//
-        @param xs: array of proposed values corresponding to signal params
-                   Size=(number of kwargs, number of psrs)
+        Parameters
+        -----
+        xs : NDArray 
+            array of parameter values
 
-        @return logpdf: summed logpdf of proposed parameter
+        Returns
+        -------
+        logpdf : float
+            logpdf of proposed parameters for the given models and parameters
         """
         return sum([p.get_logpdf(x)  # require 2 x sum of list of arrays
                     for p, x in zip(self.params, xs)]).sum().sum()
 
-    def get_rho(self, freqs, mapped_xs, Tspan):
+    def get_rho(self,
+                freqs: NDArray,
+                mapped_xs: dict[str, Any],
+                Tspan: float
+                ) -> NDArray:
         """
         A method to calculate PSD of proposed values from given psd function
 
-        //Input//
-        @param freqs: Array of PTA frequencies. NOTE: function expects number
-                      of frequencies to be greater than or equal to number
-                      of frequencies specified for this signal (N_freqs)
+        Parameters
+        ----------
+        freqs : NDArray
+            Array of PTA frequencies. NOTE: function assumes number of
+            frequencies to be greater than or equal to number of frequencies
+            specified for this Signal object (N_freqs)
 
-        @param mapped_xs: mapped dictionary of proposed values corresponding to
-                          signal params
+        mapped_xs : dict[str, Any]
+            mapped dictionary of proposed values corresponding to Signal params
 
-        @return rho: array of PSDs in shape (N_p x N_f)
+        Returns
+        -------
+        rho : NDArray
+            array of PSDs in shape (N_p x N_f)
         """
         rho = self.psd(freqs, Tspan, **mapped_xs, **self.const_params,
                        **self.psd_kwargs).T
 
         return rho
 
-    def sample(self):
+    def sample(self) -> NDArray:
         """
         Method to derive a list of samples from varied parameters
 
-        @return samples: array of samples from each parameter
+        Returns
+        -------
+        samples : NDArray
+            array of samples from each parameter
         """
         return np.hstack([p.sample() for p in self.params])
 
@@ -474,39 +480,6 @@ class ceffyl():
             logpdf = self.density[self._I, self._J, idx]
             logpdf += np.log(self.db)  # integration infinitessimal
             return np.sum(logpdf)
-
-    """
-    def hist_ln_likelihood(self, xs):
-        #
-        log likelihood function for PTMCMC to calculate logpdf of
-        proposed values given histogram density arrays. This isn't optimised
-        for speed. It is best for PTA freespec only
-
-        @param xs: proposed value array
-
-        @return logpdf: total logpdf of proposed values given KDE density array
-        #
-        rho = np.zeros((self.N_psrs, self.N_freqs))  # initalise empty array
-        for s in self.signals:  # iterate through signals
-            # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            mapped_x = {s_i.name: xs[p][:, None]
-                        for p, s_i in zip(s.pmap, s.psd_priors)}
-            rho[s.psr_idx,
-                :s.N_freqs] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
-                                         mapped_x)
-
-        logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
-
-        # search for location of logrho values within grid and logpdf
-        logpdf = 0
-        for ii in range(self.N_psrs):
-            for jj in range(self.N_freqs):
-                idx = np.searchsorted(self.binedges[ii*self.N_freqs+jj],
-                                      logrho[ii][jj]) - 1
-                logpdf += self.density[ii][jj][idx]
-
-        return logpdf
-    """
 
     def initial_samples(self):
         """
