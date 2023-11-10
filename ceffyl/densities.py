@@ -249,7 +249,7 @@ class DE_factory:
             return density
 
     def setup_densities(self,
-                        rho_grid: NDArray = np.linspace(-15.5, 0, 1551),
+                        rho_grid: NDArray = np.linspace(-9., -4., 10000),
                         log_infinitessimal: float = -36.,
                         save_density: bool = True,
                         outdir: str = 'chain/',
