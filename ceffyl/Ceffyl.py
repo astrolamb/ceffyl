@@ -291,8 +291,9 @@ class ceffyl():
         # precomputing parameter locations in proposed arrays
         id = 0
         for s in signals:
-            pmap = []
+            pmap, self.cp_signals, self.red_signals = [], [], []
             if s.CP:
+                self.cp_signals.append(s)
                 for p in s.params:
                     if p.size is None or p.size == 1:
                         pmap.append(list(np.arange(id, id+1)))
@@ -303,10 +304,12 @@ class ceffyl():
                 s.pmap = pmap
 
             else:
+                self.red_signals.append(s)
                 id_irn = id
                 for ii, p in enumerate(s.psd_priors):
                     if p.size is None or p.size == 1:
-                        pmap.append(list(np.arange(id_irn+ii, id_irn+s.N_params,
+                        pmap.append(list(np.arange(id_irn+ii,
+                                                   id_irn+s.N_params,
                                                    s.N_priors)))
                     else:
                         if len(s.psd_priors) > 1:
@@ -317,12 +320,12 @@ class ceffyl():
                             npsr = len(s.selected_psrs)
                             array = np.arange(id_irn+ii, id_irn+npsr*p.size)
                             pmap.extend(list(array.reshape(npsr, p.size)))
-                            
+
                 if p.size is None or p.size == 1:
                     id += s.N_params
                 else:
                     id += npsr * p.size
-                
+
                 s.pmap = pmap
 
         # create list of idx grids
@@ -442,7 +445,7 @@ class ceffyl():
 
         return transformed_priors
 
-    def ln_likelihood(self, xs):
+    def ln_likelihood(self, xs, jacobian=True):
         """
         vectorised log likelihood function for PTMCMC to calculate logpdf of
         proposed values given KDE density array
@@ -453,27 +456,43 @@ class ceffyl():
         """
 
         # initalise array of rho values with lower prior boundary
-        rho = np.zeros((self.N_psrs, self.N_freqs))
-        for s in self.signals:  # iterate through signals
+        red_rho, cp_rho = [np.zeros((self.N_psrs, self.N_freqs))]*2
+        for s in self.red_signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_xs = {s_i.name: xs[p]
                          for p, s_i in zip(s.pmap, s.params)}
-            rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
-                                       Tspan=self.Tspan, mapped_xs=mapped_xs)
+            red_rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
+                                           Tspan=self.Tspan,
+                                           mapped_xs=mapped_xs)
 
+        for s in self.cp_signals:  # iterate through CP signals
+            # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
+            mapped_xs = {s_i.name: xs[p][:, None]
+                         for p, s_i in zip(s.pmap, s.params)}
+            cp_rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
+                                          Tspan=self.Tspan,
+                                          mapped_xs=mapped_xs)
+
+        rho = red_rho + cp_rho  # total rho
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
 
         # search for location of logrho values within grid
         idx = np.searchsorted(self.binedges, logrho) - 1
+
+        if (idx >= self.rho_grid.shape[0]).any():
+            raise IndexError('rho value above upper prior free spectrum prior boundary')
         
         idx[idx < 0] = 0  # if spectrum less than logrho, set to bottom boundary
 
-        if (idx >= self.rho_grid.shape[0]).any():
-            return -np.inf
-        else:
-            logpdf = self.density[self._I, self._J, idx]
-            logpdf += np.log(self.db)  # integration infinitessimal
-            return np.sum(logpdf)
+        logpdf = self.density[self._I, self._J, idx]  # logpdf of rho values
+
+        if jacobian:  # flag to test jacobian requirement
+            # compute the jacobian
+            jac = np.sqrt((red_rho**2 + cp_rho**2) / rho**2)
+            logpdf += np.log(jac)
+
+        logpdf += np.log(self.db)  # integration infinitessimal
+        return np.sum(logpdf)
 
     """
     def hist_ln_likelihood(self, xs):
