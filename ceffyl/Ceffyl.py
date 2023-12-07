@@ -290,8 +290,9 @@ class ceffyl():
 
         # precomputing parameter locations in proposed arrays
         id = 0
+        self.cp_signals, self.red_signals = [], []
         for s in signals:
-            pmap, self.cp_signals, self.red_signals = [], [], []
+            pmap = []
             if s.CP:
                 self.cp_signals.append(s)
                 for p in s.params:
@@ -445,7 +446,7 @@ class ceffyl():
 
         return transformed_priors
 
-    def ln_likelihood(self, xs, jacobian=True):
+    def ln_likelihood(self, xs, jacobian=False):
         """
         vectorised log likelihood function for PTMCMC to calculate logpdf of
         proposed values given KDE density array
@@ -456,7 +457,7 @@ class ceffyl():
         """
 
         # initalise array of rho values with lower prior boundary
-        red_rho, cp_rho = [np.zeros((self.N_psrs, self.N_freqs))]*2
+        red_rho, cp_rho = np.zeros((self.N_psrs, self.N_freqs)), np.zeros((self.N_psrs, self.N_freqs))
         for s in self.red_signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_xs = {s_i.name: xs[p]
@@ -467,9 +468,9 @@ class ceffyl():
 
         for s in self.cp_signals:  # iterate through CP signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            mapped_xs = {s_i.name: xs[p][:, None]
+            mapped_xs = {s_i.name: xs[p]
                          for p, s_i in zip(s.pmap, s.params)}
-            cp_rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
+            cp_rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
                                           Tspan=self.Tspan,
                                           mapped_xs=mapped_xs)
 
@@ -480,7 +481,7 @@ class ceffyl():
         idx = np.searchsorted(self.binedges, logrho) - 1
 
         if (idx >= self.rho_grid.shape[0]).any():
-            raise IndexError('rho value above upper prior free spectrum prior boundary')
+            return -np.inf
         
         idx[idx < 0] = 0  # if spectrum less than logrho, set to bottom boundary
 
@@ -488,8 +489,8 @@ class ceffyl():
 
         if jacobian:  # flag to test jacobian requirement
             # compute the jacobian
-            jac = np.sqrt((red_rho**2 + cp_rho**2) / rho**2)
-            logpdf += np.log(jac)
+            jac = np.sqrt((red_rho**2 + cp_rho**2)) / rho
+            logpdf += np.log(jac)  # is there a factor of two mistake?
 
         logpdf += np.log(self.db)  # integration infinitessimal
         return np.sum(logpdf)
