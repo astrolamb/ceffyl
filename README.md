@@ -49,12 +49,14 @@ Do you have your own free spectrum posteriors that you want to work in ceffyl? L
 ## Attribution
 
 ```bash
-@misc{lamb2023need,
-      title={The Need For Speed: Rapid Refitting Techniques for Bayesian Spectral Characterization of the Gravitational Wave Background Using PTAs}, 
-      author={William G. Lamb and Stephen R. Taylor and Rutger van Haasteren},
-      year={2023},
-      eprint={2303.15442},
-      archivePrefix={arXiv},
-      primaryClass={astro-ph.HE}
+@article{lamb2023rapid,
+  title={Rapid refitting techniques for Bayesian spectral characterization of the gravitational wave background using pulsar timing arrays},
+  author={Lamb, William G and Taylor, Stephen R and van Haasteren, Rutger},
+  journal={Physical Review D},
+  volume={108},
+  number={10},
+  pages={103019},
+  year={2023},
+  publisher={APS}
 }
 ```

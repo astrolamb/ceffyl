@@ -10,6 +10,7 @@ Classes to create noise signals and a parallel tempered PTMCMCSampler object
 to fit spectra to a density estimation of pulsar timing array data
 """
 
+
 class signal():
     """
     A class to add signals to the GFL
@@ -270,8 +271,8 @@ class ceffyl():
         if not isinstance(signals, list):
             raise TypeError("Please supply of signals as a list")
 
-        # set number of freqs to max number of freqs of signals
-        #self.N_freqs = max([s.N_freqs for s in signals])
+        # set number of freqs to max number of freqs of signals
+        # self.N_freqs = max([s.N_freqs for s in signals])
 
         # check if pulsars in signals are in density array
         for s in signals:
@@ -316,7 +317,7 @@ class ceffyl():
                         if len(s.psd_priors) > 1:
                             print("Sorry, ceffyl can't manage more than one" +
                                   " parameter if a parameter has size > 1")
-                            return TypeError
+                            raise TypeError
                         else:
                             npsr = len(s.selected_psrs)
                             array = np.arange(id_irn+ii, id_irn+npsr*p.size)
@@ -348,13 +349,14 @@ class ceffyl():
         if inverse_transform:
             posterior_samples, hist_cumulative, binmid = [], [], []
             for s in self.signals:  # iterate through signals
-                #if binmid is None:
+                # if binmid is None:
                 for ii, p in enumerate(s.params):
                     if p.size is None or p.size == 1:
-                        posterior_samples = [s.psd_priors[ii].sample() for jj in
-                                            range(nested_posterior_sample_size)]
+                        posterior_samples = [s.psd_priors[ii].sample()
+                                             for jj in
+                                             range(nested_posterior_sample_size)]
                         hist, bin_edges = np.histogram(posterior_samples,
-                                                    bins='fd')
+                                                       bins='fd')
                         hist_cumulative.append(np.cumsum(hist/hist.sum()))
                         binmid.append((bin_edges[:-1] + bin_edges[1:])/2)
                     else:
