@@ -9,10 +9,9 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='ceffyl',
-    version='1.27',
+    version='1.3',
     description=('Software to rapidly and flexibly analyse Pulsar Timing ' +
-                 'Array data via the Generalised Factorised Likelihood (GFL)' +
-                 'method'),
+                 'Array data via factorised likelihood methods (Lamb et al. 2023)'),
     author='William G. Lamb',
     author_email='william.g.lamb@vanderbilt.edu',
     packages=['ceffyl', 'ceffyl.bw'],
