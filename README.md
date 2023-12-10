@@ -11,17 +11,20 @@ This can be done by fitting to a free spectrum of the entire PTA or individual p
 
 ## Installation
 
-To install via `pip', first create a new conda environment that has libstempo installed via enterprise. Then simply use PyPi:
+It is *highly recommended* that you install enterprise-pulsar first via conda-forge before installing ceffyl
+
+To install via Anaconda:
+```bash
+conda create -n <new_env> python enterprise-pulsar
+conda install -c conda-forge ceffyl
+```
+Then update to the latest version using github and pip!
+
+To install via `pip' only, you will have to first install tempo2 either via a conda installation of enterprise-pulsar or by installing tempo2 directory (instructions for tempo2 are [here](https://pypi.org/project/libstempo/))
 ```bash
 conda create -n ceffyl_env python enterprise-pulsar
 pip install ceffyl
 ```
-
-To install via Anaconda:
-```bash
-conda install -c conda-forge ceffyl
-```
-Then update to the latest version using github and pip!
 
 ## data
 Download representations of PTA data to accurately fit spectral models with ceffyl!
