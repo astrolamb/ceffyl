@@ -28,6 +28,9 @@ conda install -c conda-forge ceffyl
 ```
 Then update to the latest version using github and pip!
 
+This is because we use enterprise as a dependency. Enterprise requires tempo2. Tempo2 is notoriously difficult to install directly...
+We plan to remove this dependency in a future update.
+
 ## data
 Download representations of PTA data to accurately fit spectral models with ceffyl!
 
