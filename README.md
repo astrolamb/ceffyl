@@ -7,7 +7,7 @@ Pronounced /ˈkɛfɨ̞l/ **('keff-ill')**, meaning 'horse' in Cymraeg/Welsh 🏴
 
 A software package to rapidly and flexibly analyse pulsar timing array (PTA) data via refiting to pulsar timing free spectra.
 
-This can be done by fitting to a free spectrum of the entire PTA or to individual pulsars!
+This can be done by fitting to a free spectrum of the entire PTA or individual pulsars!
 
 ## Installation
 
