@@ -15,7 +15,7 @@ class PostInstallCommand(install):
         install.run(self)
         # Install enterprise without dependencies
         subprocess.check_output([sys.executable, '-m', 'pip', 'install',
-                               '--no-deps', 'enterprise-pulsar'])
+                                 '--no-deps', 'enterprise-pulsar'])
 
 
 setup(
