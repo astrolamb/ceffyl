@@ -9,6 +9,7 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
 
+"""
 class PostInstallCommand(install):
     """Post-installation for installation mode."""
     def run(self):
@@ -16,10 +17,11 @@ class PostInstallCommand(install):
         # Install enterprise without dependencies
         subprocess.check_output(['pip', 'install', '--no-deps',
                                  'enterprise-pulsar'])
-
+"""
+                                 
 
 setup(
-    cmdclass={'install': PostInstallCommand},
+    #cmdclass={'install': PostInstallCommand},
     name='ceffyl',
     version='1.30.2',
     description=('Software to rapidly and flexibly analyse Pulsar Timing ' +
