@@ -9,16 +9,17 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
 
-class PostInstallCommand(install):
+class PreInstallCommand(install):
     """Post-installation for installation mode."""
     def run(self):
-        install.run(self)
         # Install enterprise without dependencies
         subprocess.check_output([sys.executable, '-m', 'pip', 'install',
                                  '--no-deps', 'enterprise-pulsar'])
+        install.run(self)
 
 
 setup(
+    cmdclass={'install': PreInstallCommand},
     name='ceffyl',
     version='1.30.2',
     description=('Software to rapidly and flexibly analyse Pulsar Timing ' +
@@ -45,7 +46,4 @@ setup(
     package_data={'cbandwidths': ['*'], "": ["*.pyx"]},
     long_description=long_description,
     long_description_content_type='text/markdown',
-    cmdclass={
-        'install': PostInstallCommand,
-    },
 )
