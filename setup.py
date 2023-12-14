@@ -11,7 +11,7 @@ long_description = (this_directory / "README.md").read_text()
 
 """
 class PostInstallCommand(install):
-    """Post-installation for installation mode."""
+    #Post-installation for installation mode.
     def run(self):
         install.run(self)
         # Install enterprise without dependencies
