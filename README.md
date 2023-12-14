@@ -15,9 +15,10 @@ It is *highly recommended* that you install enterprise-pulsar first via conda-fo
 
 To install via `pip'
 ```bash
-conda create -n ceffyl_env python enterprise-pulsar
+conda create -n new_env python=3.10
 conda activate <new_env>
 pip install ceffyl
+pip install --no-deps enterprise-pulsar
 ```
 
 To install via Anaconda:
