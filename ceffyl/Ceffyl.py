@@ -352,16 +352,18 @@ class ceffyl():
                 # if binmid is None:
                 for ii, p in enumerate(s.params):
                     if p.size is None or p.size == 1:
-                        posterior_samples = [s.psd_priors[ii].sample()
-                                             for jj in
-                                             range(nested_posterior_sample_size)]
+                        posterior_samples = [
+                            s.psd_priors[ii].sample() for jj in
+                            range(nested_posterior_sample_size)
+                            ]
                         hist, bin_edges = np.histogram(posterior_samples,
                                                        bins='fd')
                         hist_cumulative.append(np.cumsum(hist/hist.sum()))
                         binmid.append((bin_edges[:-1] + bin_edges[1:])/2)
                     else:
                         # FIX ME: nested sampling for free spec irn
-                        print('Free spectrum not supported with nested sampling yet!')
+                        print('Free spectrum not supported with nested ' +
+                              'sampling yet!')
                         hist_cumulative, binmid = None, None
 
             self.hist_cumulative = hist_cumulative
@@ -431,7 +433,7 @@ class ceffyl():
                                  self.binmid[ii])
 
         return x
-    
+
     def hypercube(self, xs):
         """
         function to compute ppf of the prior to use in nested sampling
@@ -459,7 +461,8 @@ class ceffyl():
         """
 
         # initalise array of rho values with lower prior boundary
-        red_rho, cp_rho = np.zeros((self.N_psrs, self.N_freqs)), np.zeros((self.N_psrs, self.N_freqs))
+        red_rho = np.zeros((self.N_psrs, self.N_freqs))
+        cp_rho = np.zeros((self.N_psrs, self.N_freqs))
         for s in self.red_signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_xs = {s_i.name: xs[p]
@@ -484,8 +487,8 @@ class ceffyl():
 
         if (idx >= self.rho_grid.shape[0]).any():
             return -np.inf
-        
-        idx[idx < 0] = 0  # if spectrum less than logrho, set to bottom boundary
+
+        idx[idx < 0] = 0  # if spectrum less than logrho, set to lower boundary
 
         logpdf = self.density[self._I, self._J, idx]  # logpdf of rho values
 
