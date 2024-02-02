@@ -23,7 +23,7 @@ class PostInstallCommand(install):
 setup(
     #cmdclass={'install': PostInstallCommand},
     name='ceffyl',
-    version='1.30.4',
+    version='1.30.5',
     description=('Software to rapidly and flexibly analyse Pulsar Timing ' +
                  'Array data via factorised likelihood methods (Lamb et al. 2023)'),
     author='William G. Lamb',
