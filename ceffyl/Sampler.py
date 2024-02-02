@@ -441,17 +441,13 @@ def setup_sampler(ceffyl, outdir, logL, logp, resume=True, jump=True,
             groups.append(list(np.hstack(s.pmap)))
 
             if s.CP:  # visit GW signals x5 more often
-                [groups.append(list(np.hstack(s.pmap))) for ii in range(4)]
+                [groups.append(list(np.hstack(s.pmap))) for ii in range(10)]
 
         # make a group for each pulsar
         for p in ceffyl.pulsar_list:
             if p != 'freespec':
                 groups.append([ceffyl.param_names.index(pn) for pn in
                                ceffyl.param_names if p in pn])
-
-        # group gw parameters
-        groups.extend([[ceffyl.param_names.index(pn) for pn in
-                        ceffyl.param_names if 'gw' in pn]]*5)
 
     # sampler
     sampler = ptmcmc(ceffyl.ndim, logL, logp, cov,
