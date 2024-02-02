@@ -342,6 +342,10 @@ class ceffyl():
         self.params = list(np.hstack([s.params for s in signals]))
         self.ndim = len(self.param_names)
 
+        # only use max number of frequencies
+        # TODO: check if this works when using freq_idxs
+        self.N_freqs = max([s.N_freqs for s in signals])
+
         # setup empty 2d grid to vectorize product of pdfs
         self._I, self._J = np.ogrid[:self.N_psrs, :self.N_freqs]
 
