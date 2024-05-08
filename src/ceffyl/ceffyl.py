@@ -125,10 +125,14 @@ class Spectrum:
                 A dictionary of kwargs for your selected PSD
                            function)
         """
-        # set default parameters if none given
-        if params is None:
-            params = [Uniform(-18, -12, name='log10_A'),
-                      Uniform(0, 7, name='gamma')]
+        # saving class information as properties
+        if n_freqs is not None or freq_idxs is not None:
+            if n_freqs is not None:
+                self.n_freqs = n_freqs
+                self.freq_idxs = np.arange(n_freqs)
+            else:
+                self.freq_idxs = np.array(freq_idxs)
+                self.n_freqs = len(freq_idxs)
 
         # saving class information as properties
         self.name = name
@@ -193,16 +197,15 @@ class Spectrum:
                                 selected_psrs for p in params]
 
             self.n_params = len(self.param_names)
-            self.params = params*self.n_psrs
-            # tuple to reshape xs for vectorised computation
-            self.reshape = (1, len(selected_psrs),
-                            len(params))
+            self.params = params*self.N_psrs
             self.length = len(self.params)
 
             # tuple to reshape xs for vectorised computation
             self.reshape = (1, len(selected_psrs), len(params))
 
-    def get_logpdf(self, xs: NDArray) -> float:
+            self.cp_signals, self.red_signals = [], []
+
+    def get_logpdf(self, xs):
         """
         A method to calculate total logpdf of proposed values
 
@@ -217,7 +220,9 @@ class Spectrum:
             logpdf of proposed parameters for the given models and parameters
         """
         # require 2 x sum of list of arrays
-        return np.sum([p.get_logpdf(x) for p, x in zip(self.params, xs)])
+        return sum(
+            [p.get_logpdf(x) for p, x in zip(self.params, xs)]
+            ).sum().sum()
 
     def get_rho(self,
                 freqs: NDArray,
@@ -511,9 +516,10 @@ class Ceffyl:
         transformed_priors : NDArray
             array of point-percentile function of parameters given priors
         """
-        transformed_priors = np.empty_like(xs)  # initialise empty array
-        for ii, p in enumerate(self.params):    # iterate through signals
-            transformed_priors[ii] = p.ppf(xs[ii])
+
+        transformed_priors = np.array(
+            [p.ppf(x) for p, x in zip(self.params, xs)]
+        )
 
         return transformed_priors
 
