@@ -16,54 +16,59 @@ class Signal():
     (intrinsic red noise)
     """
     def __init__(
-            self,
-            n_freqs=None,
-            freq_idxs=None,
-            selected_psrs=None,
-            psd=models.powerlaw,
-            params=[Uniform(-18, -12)('log10_A'), Uniform(0, 7)('gamma')],
-            const_params=None,
-            common_process=True,
-            name='gw_',
-            psd_kwargs=None):
+        self,
+        n_freqs: int = None,
+        freq_idxs=None,
+        selected_psrs=None,
+        psd=models.powerlaw,
+        params=None,  # [Uniform(-18, -12)('log10_A'), Uniform(0, 7)('gamma')],
+        const_params=None,
+        common_process=True,
+        name='gw_',
+        psd_kwargs=None
+    ):
         """
         Initialise a signal class to model intrinsic red noise or a common
         process
 
-        //Inputs//
-        @param N_freqs: Number of frequencies for this signal. Expected to be
-                        equal or less than the number of frequencies used to
-                        preprocess data. This fits the first N_freqs
-                        frequencies to the data
-
-        @param freq_idxs: an array of indices of frequencies to fit to data.
-                          This is an alternative to N_freqs. e.g. if you'd like
+        Args:
+            N_freqs:
+                Number of frequencies for this signal. Expected to be equal
+                or less than the number of frequencies used to preproces data.
+                This fits the first N_freqs frequencies to the data
+            freq_idxs:
+                an array of indices of frequencies to fit to data. This
+                is an alternative to N_freqs. e.g. if you'd like
                           to fit data to every second frequency, input
                           freq_idxs=[0,2,4,6,...]
-
-        @param selected_psrs: A list of names of the pulsars under this signal.
+            selected_psrs:
+                A list of names of the pulsars under this signal.
                               Expected to be a subset of pulsars within density
                               array loaded in GFL class
-
-        @param psd: A function from enterprise.signals.gp_priors to model PSD
+            psd:
+                A function from enterprise.signals.gp_priors to model PSD
                     for given set of frquencies and spectral characteristics
 
-        @param param: A list of parameters from enterprise.signals.gp_priors to
+            param:
+                A list of parameters from enterprise.signals.gp_priors to
                       vary. Parameters initialised with prior limits, prior
                       distributions, and name corresponding to kwargs in psd
 
-        @param const_params: A dictionary of values to keep constant. Dictonary
+            const_params:
+                A dictionary of values to keep constant. Dictonary
                              keys are kwargs for psd, values are floats
 
-        @param common_process: Is this a common process (e.g. GW signal) or not
+            common_process:
+                Is this a common process (e.g. GW signal) or not
                                (e.g. instrinsic pulsar red noise)?
 
-        @param name: What do you want to call your signal? If you're using
+            name:
+                What do you want to call your signal? If you're using
                       multiple signals, change this name each time!
 
-        @param psd_kwargs: A dictionary of kwargs for your selected PSD
+            psd_kwargs:
+                A dictionary of kwargs for your selected PSD
                            function)
-
         """
 
         # saving class information as properties
@@ -113,16 +118,6 @@ class Signal():
             self.selected_psrs = selected_psrs
             self.n_psrs = len(selected_psrs)
 
-            """
-            for p in params:
-                if p.size is not None:
-                    print('single pulsars with varying parameters for each ' +
-                          'frequency is not yet supported')
-                    return
-                else:
-                    size = 1
-            """
-
             param_names = []
             for p in params:
                 if p.size is None or p.size == 1:
@@ -141,13 +136,11 @@ class Signal():
                                 selected_psrs for p in params]
 
             self.n_params = len(self.param_names)
-            self.params = params*self.N_psrs
+            self.params = params*self.n_psrs
             # tuple to reshape xs for vectorised computation
             self.reshape = (1, len(selected_psrs),
                             len(params))
             self.length = len(self.params)
-
-            self.cp_signals, self.red_signals = [], []
 
     def get_logpdf(self, xs):
         """
@@ -265,7 +258,7 @@ class Ceffyl():
 
         self.density = np.nan_to_num(density, nan=-36.)
 
-        return
+        self.cp_signals, self.red_signals = [], []
 
     def add_signals(self, signals, inverse_transform=False,
                     nested_posterior_sample_size=10000):
@@ -289,10 +282,10 @@ class Ceffyl():
             if s.selected_psrs is None:
                 s.selected_psrs = self.pulsar_list
 
-            self.N_psrs = len(s.selected_psrs)  # save number of psrs
+            self.n_psrs = len(s.selected_psrs)  # save number of psrs
 
             if not np.isin(s.selected_psrs, self.pulsar_list).all():
-                raise ValueError('Mismatch between density array pulsars and' +
+                raise ValueError('Mismatch between density array pulsars and'
                                  'the pulsars you selected')
 
             else:  # save idx of (subset of) psrs within larger list
@@ -300,18 +293,18 @@ class Ceffyl():
                                       for p in s.selected_psrs])
 
         # precomputing parameter locations in proposed arrays
-        id = 0
+        idx = 0
         for s in signals:
             pmap = []
             if s.CP:
                 self.cp_signals.append(s)
                 for p in s.params:
                     if p.size is None or p.size == 1:
-                        pmap.append(list(np.arange(id, id+1)))
-                        id += 1
+                        pmap.append(list(np.arange(idx, idx+1)))
+                        idx += 1
                     else:
-                        pmap.append(list(np.arange(id, id+p.size)))
-                        id += p.size
+                        pmap.append(list(np.arange(idx, idx+p.size)))
+                        idx += p.size
                 s.pmap = pmap
 
             else:
@@ -324,7 +317,7 @@ class Ceffyl():
                                                    s.N_priors)))
                     else:
                         if len(s.psd_priors) > 1:
-                            print("Sorry, ceffyl can't manage more than one" +
+                            print("Sorry, ceffyl can't manage more than one"
                                   " parameter if a parameter has size > 1")
                             raise TypeError
                         else:
@@ -333,9 +326,9 @@ class Ceffyl():
                             pmap.extend(list(array.reshape(npsr, p.size)))
 
                 if p.size is None or p.size == 1:
-                    id += s.N_params
+                    idx += s.N_params
                 else:
-                    id += npsr * p.size
+                    idx += npsr * p.size
 
                 s.pmap = pmap
 
@@ -356,7 +349,7 @@ class Ceffyl():
         self.N_freqs = max([s.N_freqs for s in signals])
 
         # setup empty 2d grid to vectorize product of pdfs
-        self._I, self._J = np.ogrid[:self.N_psrs, :self.N_freqs]
+        self._I, self._J = np.ogrid[:self.n_psrs, :self.N_freqs]
 
         # information for nested sampling
         if inverse_transform:
@@ -462,7 +455,7 @@ class Ceffyl():
 
         return transformed_priors
 
-    def ln_likelihood(self, xs, jacobian=False):
+    def ln_likelihood(self, xs):
         """
         vectorised log likelihood function for PTMCMC to calculate logpdf of
         proposed values given KDE density array
@@ -473,8 +466,8 @@ class Ceffyl():
         """
 
         # initalise array of rho values with lower prior boundary
-        red_rho = np.zeros((self.N_psrs, self.N_freqs))
-        cp_rho = np.zeros((self.N_psrs, self.N_freqs))
+        red_rho = np.zeros((self.n_psrs, self.n_freqs))
+        cp_rho = np.zeros((self.n_psrs, self.n_freqs))
         for s in self.red_signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_xs = {s_i.name: xs[p]
