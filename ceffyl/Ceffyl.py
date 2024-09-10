@@ -1,31 +1,115 @@
-"""Classes to create noise signals and a parallel tempered PTMCMCSampler
-object to fit spectra to a density estimation of pulsar timing array data"""
+"""Classes to create noise spectra and a parallel tempered PTMCMCSampler
+object to fit spectral models to a free spectrum of pular timing array data.
+
+The Ceffyl class is a class to fit sources' spectra to a compressed
+representation of pulsar timing array data (called a free spectrum). The
+class is designed to fit spectra to a free spectrum of a common red process
+(with or without inter-pulsar correlations) for an ensemble of pulsars (the
+'PTA Free Spectrum'), or to fit individual and/or common red processes to an
+ensemble of free spectra of individual pulsars ('GFL Lite'/'GFL').
+
+The Spectrum class is a class to create a noise spectrum for a pulsar timing
+array. The class is designed to model a common red process (e.g. a GW signal)
+or an individual red process (e.g. intrinsic red noise) for a pulsar timing
+array. The class is designed to be used in the Ceffyl class to fit noise
+spectra to a free spectrum of pulsar timing array data.
+
+Example:
+
+    # import Ceffyl class
+    from ceffyl import Ceffyl
+
+    # create a Ceffyl object
+    ceffyl = Ceffyl(datadir='path/to/data')
+
+    # create a Spectrum object
+    spectrum = Spectrum(n_freqs=10, selected_psrs=['J1713+0747'])
+
+    # add the Spectrum object to the Ceffyl object
+    ceffyl.add_signals([spectrum])
+
+    # run the PTMCMCSampler
+    ceffyl.run_sampler()
+
+    # plot the results
+    ceffyl.plot_results()
+
+
+Classes:
+
+    Ceffyl:
+        A class to fit sources' spectra to a compressed representation of
+        pulsar timing array data (called a free spectrum).
+
+    Spectrum:
+        A class to create a noise spectrum for a pulsar timing array.
+"""
 
 # imports
 import os
 import webbrowser
 import numpy as np
-from enterprise.signals.parameter import Uniform
 from ceffyl import models
+from .parameter import Uniform
+from .utils import frequencies
+from types import ModuleType
 
 
-class Signal():
+class Pulsar:
     """
-    A class to add signals to the GFL
-    These signals can be a common process (GW) or individual to each pulsar
-    (intrinsic red noise)
+    A class to store information about a pulsar.
+
+    The Pulsar class is a class to store information about a pulsar in a
+    pulsar timing array. The class is designed to be used in the Ceffyl class
+    to store information about the pulsars in the pulsar timing array.
+
+    Args:
+
+    """
+    def __init__(self, name, freqs, logpdf, log10rhogrid, tspan):
+        """
+        Initialise a Pulsar object with information about a pulsar.
+
+        Args:
+            name:
+                The name of the pulsar.
+            freqs:
+                The frequencies of the pulsar data.
+            density:
+                The density of the pulsar data.
+            tspan:
+                The time span of the pulsar data.
+        """
+        self.name = name
+        self.freqs = freqs
+        self.logpdf = logpdf
+        self.log10rhogrid = log10rhogrid
+        self.tspan = tspan
+
+
+class Spectrum:
+    """
+    A class to add spectra to free spectra for fitting in Ceffyl.
+
+    The Spectrum class is a class to create a noise spectrum from a given
+    GW source. The class is designed to model a common red process (e.g. a GW
+    signal) or an individual red process (e.g. intrinsic red noise) for a
+    pulsar timing array. The class is designed to be used in the Ceffyl class
+    to fit noise spectra to a free spectrum of pulsar timing array data.
+
+    Args:
+
     """
     def __init__(
         self,
-        n_freqs: int = None,
-        freq_idxs=None,
-        selected_psrs=None,
-        psd=models.powerlaw,
-        params=None,  # [Uniform(-18, -12)('log10_A'), Uniform(0, 7)('gamma')],
-        const_params=None,
-        common_process=True,
-        name='gw_',
-        psd_kwargs=None
+        psrs: Pulsar | list[Pulsar],
+        nfreqs: int,
+        tspan: float = None,
+        psd: ModuleType = models.powerlaw,
+        params: list | np.ndarray = None,
+        common_process: bool = True,
+        name: str = 'gw_',
+        psd_kwargs: dict = None
     ):
         """
         Initialise a signal class to model intrinsic red noise or a common
@@ -70,19 +154,19 @@ class Signal():
                 A dictionary of kwargs for your selected PSD
                            function)
         """
+        # set default parameters if none given
+        if params is None:
+            params = [Uniform(-18, -12, name='log10_A'),
+                      Uniform(0, 7, name='gamma')]
 
         # saving class information as properties
-        if n_freqs is not None or freq_idxs is not None:
-            if n_freqs is not None:
-                self.n_freqs = n_freqs
-                self.freq_idxs = np.arange(n_freqs)
-            else:
-                self.freq_idxs = np.array(freq_idxs)
-                self.n_freqs = len(freq_idxs)
+        self.name = name
+        self.common_process = common_process
 
-        else:
-            print("Please give me some frequencies to search over...")
-            return
+        self.nfreqs = nfreqs
+        if tspan is None:
+            tspan = np.zeros(len(psrs))
+            [tspan[ii] = p.tspan for ii, p in enumerate(psrs)]
 
         self.psd = psd
         self.psd_priors = params
@@ -153,9 +237,7 @@ class Signal():
         @return logpdf: summed logpdf of proposed parameter
         """
         # require 2 x sum of list of arrays
-        return sum(
-            [p.get_logpdf(x) for p, x in zip(self.params, xs)]
-            ).sum().sum()
+        return np.sum([p.get_logpdf(x) for p, x in zip(self.params, xs)])
 
     def get_rho(self, freqs, mapped_xs, tspan):
         """
@@ -185,36 +267,21 @@ class Signal():
         return np.hstack([p.sample() for p in self.params])
 
 
-class Ceffyl():
+class Ceffyl:
     """
     // Ceffyl //
 
     A class to fit signals to free spectra to derive the signals' spectral
     characteristics
     """
-    def __init__(self, datadir, pulsar_list=None, hist=False, tspan=None):
+    def __init__(self, pulsar_list: list[Pulsar] = None,
+                 spectra: list[Spectrum] = None,):
         """
-        Initialise the class and return a ceffyl object
-
-        @params signals: A list of signals to be searched over
-        @params datadir: location of directory containing numpy arrays of
-                         densities, corresponding log10rho grids and labels,
-                         chain names, and frequencies
-        @params pulsar_list: list of pulsars to search over
-        @param hist: Flag to state that you're using histograms instead of
-                     KDEs
-        @param Tspan: Manually enter a Tspan. Default = Tspan of preprocessed
-                      data. I recommend keeping it to default
-
-        @param ceffyl: return a ceffyl object
+        Initialise the Ceffyl object
+        
+        Args:
+            pulsar_list: A list of Pulsar objects
         """
-
-        # checking if datadir exists
-        # returns an error if not
-        if not os.path.isdir(datadir):
-            print("oops! not a directory!")
-            webbrowser.open('https://youtu.be/iVSrEn561Bc?t=17')
-            raise FileNotFoundError
 
         # saving properties
         self.freqs = np.load(f'{datadir}/freqs.npy')
@@ -226,17 +293,14 @@ class Ceffyl():
             self.tspan = tspan
         self.rho_labels = np.loadtxt(f'{datadir}/log10rholabels.txt',
                                      dtype=np.unicode_, ndmin=1)
-        if hist:
-            self.binedges = np.load(f'{datadir}/binedges.npy',
-                                    allow_pickle=True)
-        else:
-            rho_grid = np.load(f'{datadir}/log10rhogrid.npy')
 
-            db = rho_grid[1] - rho_grid[0]
-            binedges = rho_grid - 0.5*db
-            binedges = np.append(binedges, binedges[-1]+0.5*db)
+        rho_grid = np.load(f'{datadir}/log10rhogrid.npy')
 
-            self.rho_grid, self.binedges, self.db = rho_grid, binedges, db
+        db = rho_grid[1] - rho_grid[0]
+        binedges = rho_grid - 0.5*db
+        binedges = np.append(binedges, binedges[-1]+0.5*db)
+
+        self.rho_grid, self.binedges, self.db = rho_grid, binedges, db
 
         # selected pulsars
         if pulsar_list is None:

@@ -135,3 +135,10 @@ dmypy.json
 
 # ignore created .c file
 ceffyl/bw/cbandwidths.c
+
+# ignore files in data folder
+ceffyl/data/*
+
+# ignore cache files
+__pycache__/*
+.DS_Store

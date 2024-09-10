@@ -1,15 +1,48 @@
 """
-A utilities module containing various useful
-functions for use in other modules.
+A module containing various useful spectral models for use.
+
+The spectral models are used to generate the PSD of a stochastic process.
+The models are used in the `enterprise` package to generate the PSD of
+a stochastic process.
 
 Modified for use in ceffyl from github.com/nanograv/enterprise
+
+Example:
+    To generate a power-law PSD model, use the `powerlaw` function:
+    >>> import numpy as np
+    >>> import ceffyl.models as models
+    >>> f = 10**np.logspace(-9, -7, 100)[:, np.newaxis]
+    >>> Tspan = 10 * 365.25 * 86400  # 10 years in seconds
+    >>> log10_A = -15
+    >>> gamma = 5
+    >>> psd = models.powerlaw(f, Tspan, log10_A=log10_A, gamma=gamma)
+
+    The `psd` variable will contain the power-law PSD model evaluated at
+    the frequencies in `f`.
 """
 
 import numpy as np
 import enterprise.constants as const
 
 
-def powerlaw(f, Tspan, log10_A=-16, gamma=5):
+def powerlaw(f: float|np.ndarray,
+             Tspan: float,
+             log10_A: float|np.ndarray = -16,
+             gamma: float|np.ndarray = 13/3) -> float|np.ndarray:
+    """
+    Power-law model. PSD amplitude at each frequency is a power-law.
+
+    Args:
+        f: (Nf,)-array of frequencies
+        Tspan: total time span of the data set
+        log10_A: (,Np)-array log10 amplitude of the power-law
+        gamma: (,Np)-array spectral index of the power-law
+
+    Returns:
+        (Nf, Np)-array of PSD values
+
+    TODO: Check if array shapes
+    """
 
     return ((10**log10_A)**2/12.0/np.pi**2 * const.fyr**(gamma-3)
             * f**(-gamma) / Tspan)
@@ -33,18 +66,18 @@ def broken_turnover(f, Tspan, log10_A=-15, gamma=13/3, lf0=-8.5, kappa=10/3,
     return hcf**2/12/np.pi**2/f**3 / Tspan
 
 
-def t_process(f, Tspan, log10_A=-15, gamma=4.33, alphas=None):
+def t_process(f, Tspan, log10_A=-15, gamma=13/3, alphas=None):
     """
     t-process model. PSD  amplitude at each frequency
     is a fuzzy power-law.
 
     NOTE: assume alphas is an array with the same size as f
     """
-    alphas = alphas[:, None]
+    alphas = alphas[:, np.newaxis]
     return powerlaw(f, Tspan, log10_A=log10_A, gamma=gamma) * alphas
 
 
-def psd_t_process(f, Tspan, psd=powerlaw, log10_A=-15, gamma=5,
+def psd_t_process(f, Tspan, psd=powerlaw, log10_A=-15, gamma=13/3,
                   alphas=None, **psd_kwargs):
     """
     t-process model. PSD  amplitude at each frequency
@@ -56,7 +89,7 @@ def psd_t_process(f, Tspan, psd=powerlaw, log10_A=-15, gamma=5,
     return psd(f, Tspan, log10_A=log10_A, gamma=gamma, **psd_kwargs) * alphas
 
 
-def t_process_adapt(f, Tspan, log10_A=-15, gamma=4.33, alphas_adapt=None,
+def t_process_adapt(f, Tspan, log10_A=-15, gamma=13/3, alphas_adapt=None,
                     nfreq=None):
     """
     t-process model. PSD  amplitude at each frequency
@@ -74,7 +107,7 @@ def t_process_adapt(f, Tspan, log10_A=-15, gamma=4.33, alphas_adapt=None,
     return powerlaw(f, Tspan, log10_A=log10_A, gamma=gamma) * alpha_model
 
 
-def turnover_knee(f, Tspan, log10_A=-15, gamma=5, lfb=None,
+def turnover_knee(f, Tspan, log10_A=-15, gamma=13/3, lfb=None,
                   lfk=None, kappa=10/3, delta=5):
     """
     Generic turnover spectrum with a high-frequency knee.
@@ -95,7 +128,7 @@ def turnover_knee(f, Tspan, log10_A=-15, gamma=5, lfb=None,
     return hcf ** 2 / 12 / np.pi ** 2 / f ** 3 / Tspan
 
 
-def broken_powerlaw(f, Tspan, log10_A=-15, gamma=5, delta=0.1, log10_fb=-9,
+def broken_powerlaw(f, Tspan, log10_A=-15, gamma=13/3, delta=0.1, log10_fb=-9,
                     kappa=0.1):
     """
     Generic broken powerlaw spectrum.
@@ -113,6 +146,7 @@ def broken_powerlaw(f, Tspan, log10_A=-15, gamma=5, delta=0.1, log10_fb=-9,
            * (1+(f/10**log10_fb)**(1/kappa)) ** (kappa * (gamma - delta) / 2))
     return hcf ** 2 / (12*np.pi**2 * f**3) / Tspan
 
+
 def free_spectrum(f, Tspan, log10_rho):
     """
     Free spectral model. PSD  amplitude at each frequency is a free parameter.
@@ -120,6 +154,7 @@ def free_spectrum(f, Tspan, log10_rho):
     parameter and T is the observation length
     """
     return 10 ** (2*log10_rho)
+
 
 def powerlaw_genmodes(f, Tspan, log10_A=-16, gamma=5, wgts=None):
     if wgts is not None:

@@ -1,3 +1,6 @@
+"""
+"""
+
 import numpy as np
 import pickle
 import os
@@ -10,13 +13,16 @@ from enterprise_extensions.empirical_distr import (EmpiricalDistribution1D,
 
 class JumpProposal(object):
     """
-    A class to propose jumps for parallel tempered swaps
+    A class to propose jumps for parallel tempered swaps.
+
+
 
     Shamelessly copied and modified from
-
     enterprise_extensions (https://github.com/nanograv/enterprise_extensions/)
     and
     PTMCMCSampler (https://github.com/jellis18/PTMCMCSampler/)
+
+
     """
     def __init__(self, signals, empirical_distr=None, save_ext_dists=False,
                  outdir='chains'):
@@ -402,7 +408,7 @@ class JumpProposal(object):
 
 
 def setup_sampler(ceffyl, outdir, logL, logp, resume=True, jump=True,
-                  groups=None, loglkwargs={}, logpkwargs={}, ptmcmc_kwargs={},
+                  groups=None, loglkwargs=None, logpkwargs=None, ptmcmc_kwargs={},
                   empirical_distr=None,  save_ext_dists=False):
     """
     Method to setup sampler
