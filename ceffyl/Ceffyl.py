@@ -441,8 +441,6 @@ class ceffyl():
     def hypercube(self, xs):
         """
         function to compute ppf of the prior to use in nested sampling
-        REQUIRES: enterprise fork by vhaasteren:
-        git@github.com:vhaasteren/enterprise.git
 
         @param xs: proposed value array
         """
@@ -454,7 +452,7 @@ class ceffyl():
 
         return transformed_priors
 
-    def ln_likelihood(self, xs, jacobian=False):
+    def ln_likelihood(self, xs):
         """
         vectorised log likelihood function for PTMCMC to calculate logpdf of
         proposed values given KDE density array
@@ -496,46 +494,8 @@ class ceffyl():
 
         logpdf = self.density[self._I, self._J, idx]  # logpdf of rho values
 
-        if jacobian:  # flag to test jacobian requirement
-            # compute the jacobian
-            jac = np.sqrt((red_rho**2 + cp_rho**2)) / rho
-            logpdf += np.log(jac)  # is there a factor of two mistake?
-
         logpdf += np.log(self.db)  # integration infinitessimal
         return np.sum(logpdf)
-
-    """
-    def hist_ln_likelihood(self, xs):
-        #
-        log likelihood function for PTMCMC to calculate logpdf of
-        proposed values given histogram density arrays. This isn't optimised
-        for speed. It is best for PTA freespec only
-
-        @param xs: proposed value array
-
-        @return logpdf: total logpdf of proposed values given KDE density array
-        #
-        rho = np.zeros((self.N_psrs, self.N_freqs))  # initalise empty array
-        for s in self.signals:  # iterate through signals
-            # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            mapped_x = {s_i.name: xs[p][:, None]
-                        for p, s_i in zip(s.pmap, s.psd_priors)}
-            rho[s.psr_idx,
-                :s.N_freqs] += s.get_rho(self.reshaped_freqs[:s.N_freqs],
-                                         mapped_x)
-
-        logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
-
-        # search for location of logrho values within grid and logpdf
-        logpdf = 0
-        for ii in range(self.N_psrs):
-            for jj in range(self.N_freqs):
-                idx = np.searchsorted(self.binedges[ii*self.N_freqs+jj],
-                                      logrho[ii][jj]) - 1
-                logpdf += self.density[ii][jj][idx]
-
-        return logpdf
-    """
 
     def initial_samples(self):
         """
