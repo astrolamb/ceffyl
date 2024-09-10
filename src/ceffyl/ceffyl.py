@@ -52,10 +52,42 @@ from typing import Any
 import os
 import webbrowser
 import numpy as np
-from numpy.typing import NDArray
 from ceffyl import models
-from ceffyl.priors import Uniform
-from ceffyl.pulsar import Pulsar, Frequencies
+from .parameter import Uniform
+from .utils import frequencies
+from types import ModuleType
+
+
+class Pulsar:
+    """
+    A class to store information about a pulsar.
+
+    The Pulsar class is a class to store information about a pulsar in a
+    pulsar timing array. The class is designed to be used in the Ceffyl class
+    to store information about the pulsars in the pulsar timing array.
+
+    Args:
+
+    """
+    def __init__(self, name, freqs, logpdf, log10rhogrid, tspan):
+        """
+        Initialise a Pulsar object with information about a pulsar.
+
+        Args:
+            name:
+                The name of the pulsar.
+            freqs:
+                The frequencies of the pulsar data.
+            density:
+                The density of the pulsar data.
+            tspan:
+                The time span of the pulsar data.
+        """
+        self.name = name
+        self.freqs = freqs
+        self.logpdf = logpdf
+        self.log10rhogrid = log10rhogrid
+        self.tspan = tspan
 
 
 class Spectrum:
@@ -125,14 +157,10 @@ class Spectrum:
                 A dictionary of kwargs for your selected PSD
                            function)
         """
-        # saving class information as properties
-        if n_freqs is not None or freq_idxs is not None:
-            if n_freqs is not None:
-                self.n_freqs = n_freqs
-                self.freq_idxs = np.arange(n_freqs)
-            else:
-                self.freq_idxs = np.array(freq_idxs)
-                self.n_freqs = len(freq_idxs)
+        # set default parameters if none given
+        if params is None:
+            params = [Uniform(-18, -12, name='log10_A'),
+                      Uniform(0, 7, name='gamma')]
 
         # saving class information as properties
         self.name = name
@@ -220,9 +248,7 @@ class Spectrum:
             logpdf of proposed parameters for the given models and parameters
         """
         # require 2 x sum of list of arrays
-        return sum(
-            [p.get_logpdf(x) for p, x in zip(self.params, xs)]
-            ).sum().sum()
+        return np.sum([p.get_logpdf(x) for p, x in zip(self.params, xs)])
 
     def get_rho(self,
                 freqs: NDArray,
@@ -278,7 +304,7 @@ class Ceffyl:
             pulsar_list: A list of Pulsar objects
         """
 
-        # storing frequency metadata
+        # saving properties
         self.freqs = np.load(f'{datadir}/freqs.npy')
         self.n_freqs = self.freqs.size
         self.reshaped_freqs = self.freqs.reshape((1, self.N_freqs)).T
@@ -287,7 +313,7 @@ class Ceffyl:
         else:
             self.tspan = tspan
         self.rho_labels = np.loadtxt(f'{datadir}/log10rholabels.txt',
-                                     dtype=np.str_, ndmin=1)
+                                     dtype=np.unicode_, ndmin=1)
 
         rho_grid = np.load(f'{datadir}/log10rhogrid.npy')
 

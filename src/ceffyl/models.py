@@ -27,28 +27,23 @@ from numpy.typing import NDArray
 import enterprise.constants as const
 
 
-def powerlaw(f: NDArray,
+def powerlaw(f: float|np.ndarray,
              Tspan: float,
-             log10_A: float = -15.,
-             gamma: float = 13/3) -> NDArray:
+             log10_A: float|np.ndarray = -16,
+             gamma: float|np.ndarray = 13/3) -> float|np.ndarray:
     """
-    Basic powerlaw
+    Power-law model. PSD amplitude at each frequency is a power-law.
 
-    Parameters
-    ----------
-    f : NDArray
-        array of frequencies
-    Tspan : float
-        timespan of dataset
-    log10_A : float
-        log10 amplitude at reference frequency of f=1/yr
-    gamma : float
-        spectral index
+    Args:
+        f: (Nf,)-array of frequencies
+        Tspan: total time span of the data set
+        log10_A: (,Np)-array log10 amplitude of the power-law
+        gamma: (,Np)-array spectral index of the power-law
 
-    Returns
-    -------
-    rho2 : NDArray
-        computed spectrum, units = [s^2] (i.e. PSD/Tspan)
+    Returns:
+        (Nf, Np)-array of PSD values
+
+    TODO: Check if array shapes
     """
 
     return ((10**log10_A)**2/12.0/np.pi**2 * const.fyr**(gamma-3)
@@ -285,9 +280,47 @@ def t_process_adapt(f: NDArray,
     return powerlaw(f, Tspan, log10_A=log10_A, gamma=gamma) * alpha_model
 
 
-def free_spectrum(f: NDArray,
-                  Tspan: float,
-                  log10_rho: NDArray) -> NDArray:
+def turnover_knee(f, Tspan, log10_A=-15, gamma=13/3, lfb=None,
+                  lfk=None, kappa=10/3, delta=5):
+    """
+    Generic turnover spectrum with a high-frequency knee.
+    :param f: sampling frequencies of GWB
+    :param A: characteristic strain amplitude at f=1/yr
+    :param gamma: negative slope of PSD around f=1/yr (usually 13/3)
+    :param lfb: log10 transition frequency at which environment dominates GWs
+    :param lfk: log10 knee frequency due to population finiteness
+    :param kappa: smoothness of turnover (10/3 for 3-body stellar scattering)
+    :param delta: slope at higher frequencies
+    """
+    hcf = (
+        10 ** log10_A
+        * (f / const.fyr) ** ((3 - gamma) / 2)
+        * (1.0 + (f / 10 ** lfk)) ** delta
+        / np.sqrt(1 + (10 ** lfb / f) ** kappa)
+    )
+    return hcf ** 2 / 12 / np.pi ** 2 / f ** 3 / Tspan
+
+
+def broken_powerlaw(f, Tspan, log10_A=-15, gamma=13/3, delta=0.1, log10_fb=-9,
+                    kappa=0.1):
+    """
+    Generic broken powerlaw spectrum.
+    :param f: sampling frequencies
+    :param A: characteristic strain amplitude [set for gamma at f=1/yr]
+    :param gamma: negative slope of PSD for f > f_break [set for comparison
+        at f=1/yr (default 13/3)]
+    :param delta: slope for frequencies < f_break
+    :param log10_fb: log10 transition frequency at which slope switches from
+        gamma to delta
+    :param kappa: smoothness of transition (Default = 0.1)
+    """
+    hcf = (10 ** log10_A
+           * (f / const.fyr) ** ((3 - gamma) / 2)
+           * (1+(f/10**log10_fb)**(1/kappa)) ** (kappa * (gamma - delta) / 2))
+    return hcf ** 2 / (12*np.pi**2 * f**3) / Tspan
+
+
+def free_spectrum(f, Tspan, log10_rho):
     """
     Free spectral model. PSD  amplitude at each frequency is a free parameter.
     Model is parameterized by S(f_i) = \rho_i^2 * T, where \rho_i is the free
