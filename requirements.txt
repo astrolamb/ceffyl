@@ -1,5 +1,4 @@
 Cython==0.29.37
-emcee==3.1.6
 encor==1.1.2
 enterprise_extensions==2.4.2
 enterprise_pulsar==3.4.1
@@ -7,11 +6,6 @@ h5py==3.11.0
 holodeck==0.3.1
 kalepy==1.4.3
 KDEpy==1.1.9
-KDEpy==1.1.10
 la_forge==1.1.0
-matplotlib==3.9.2
 natsort==8.4.0
-numpy==2.1.1
 ptmcmcsampler==2.1.2
-scipy==1.14.1
-setuptools==73.0.1
