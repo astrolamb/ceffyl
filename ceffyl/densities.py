@@ -8,13 +8,19 @@ from emcee.autocorr import integrated_time
 import la_forge.core as co
 import glob
 import time
-
+import itertools
 try:
     import kalepy as kale
 except ImportError:
     print('kalepy cannot be found. You cannot use this if you wanted it')
     pass
-
+try:
+    from joblib import Parallel, delayed
+    no_joblib = False
+except ImportError:
+    no_joblib = True
+    print('joblib cannot be found. You cannot setup densities for multiple pulsars simultaneously.')
+    pass
 from KDEpy import FFTKDE
 import warnings
 import os
@@ -206,7 +212,8 @@ class DE_factory:
                         outdir='chain/', kde_func='FFTKDE', bandwidth=bw.sj,
                         kernel='epanechnikov', bw_thin_chain=False,
                         kde_thin_chain=False, change_nans=True, bw_kwargs={},
-                        kde_kwargs={}, bootstrap=False, Nbootstrap=None):
+                        kde_kwargs={}, bootstrap=False, Nbootstrap=None,
+                        num_threads = 1):
         """
         A method to setup densitites for all chains and save them as a .npy
         file
@@ -231,6 +238,8 @@ class DE_factory:
         @param kde_kwargs: kwargs for KDE density function
         @param bootstrap: boolean to take bootstraps of samples
         @param Nbootstrap: number of samples to bootstrap if bootstrap==True
+        @param num_threads: number of CPU threads to use to calculate multiple 
+                            pulsars' densities simultaneously
 
         @return density: array of densities
         @return kdes: array of kde objects (if chosen)
@@ -248,7 +257,9 @@ class DE_factory:
 
         # calculating densities for each freq for each psr
         pdfs, bws = [], []
-        for ii, c in enumerate(self.corelist):
+        def doit(ii):
+            pdfs_in, bws_in = [], []
+            c = self.corelist[ii]
             print(f'Computing densities for psr {ii}', flush=True)
             core = co.Core(corepath=c)
 
@@ -273,13 +284,29 @@ class DE_factory:
                 else:
                     bw = bandwidth
 
-                bws.append(bw)  # save bandwidths
+                bws_in.append(bw)  # save bandwidths
 
                 # calculate pdf along grid points and save
-                pdfs.append(self.density(data, bw, kernel=kernel,
+                pdf = self.density(data, bw, kernel=kernel,
                                          rho_grid=rho_grid, kde_func=kde_func,
                                          thin_chain=kde_thin_chain,
-                                         **kde_kwargs))
+                                         **kde_kwargs)
+                pdfs_in.append(pdf)
+            return pdfs_in, bws_in
+        
+        if no_joblib:
+            ansp = []
+            for ii in range(len(self.corelist)):
+                ansp.append(doit(ii))
+        else:
+            ansp = Parallel(n_jobs=num_threads)(delayed(doit)(ii) for ii in range(len(self.corelist)))
+
+        for ii in range(len(ansp)):
+            pdfs.append(ansp[ii][0])
+            bws.append(ansp[ii][1])
+        del ansp
+        pdfs = list(itertools.chain.from_iterable(pdfs))
+        bws = list(itertools.chain.from_iterable(bws))
 
         # reshape array of densities
         pdfs = np.array(pdfs).reshape(self.N_psrs, self.N_freqs,
