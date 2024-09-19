@@ -16,6 +16,7 @@ except ImportError:
     pass
 try:
     from joblib import Parallel, delayed
+    no_joblib = False
 except ImportError:
     no_joblib = True
     print('joblib cannot be found. You cannot setup densities for multiple pulsars simultaneously.')
