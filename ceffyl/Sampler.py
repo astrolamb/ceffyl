@@ -271,7 +271,7 @@ class JumpProposal(object):
         q[pidx] = rand
 
         # forward-backward jump probability
-        lqxy = p.get_logpdf(x[pidx] - q[pidx])
+        lqxy = p.get_logpdf(x[pidx]) - p.get_logpdf(q[pidx])
 
         return q, float(lqxy)
 
@@ -299,7 +299,7 @@ class JumpProposal(object):
         q[pidx] = p.sample()
 
         # forward-backward jump probability
-        lqxy = p.get_logpdf(x[pidx] - q[pidx])
+        lqxy = p.get_logpdf(x[pidx]) - p.get_logpdf(q[pidx])
 
         return q, float(lqxy)
 
@@ -342,7 +342,7 @@ class JumpProposal(object):
         q[pidx] = rand
 
         # forward-backward jump probability
-        lqxy = p.get_logpdf(x[pidx] - q[pidx])
+        lqxy = p.get_logpdf(x[pidx]) - p.get_logpdf(q[pidx])
 
         return q, float(lqxy)
 
