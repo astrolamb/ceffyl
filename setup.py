@@ -10,7 +10,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='ceffyl',
-    version='1.30.6',
+    version='1.31',
     description=('Software to rapidly and flexibly analyse Pulsar Timing ' +
                  'Array data via factorised likelihood methods (Lamb et al. 2023)'),
     author='William G. Lamb',
