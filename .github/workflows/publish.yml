@@ -25,7 +25,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact-${{ matrix.os }}-${{ matrix.version }}
+          name: artifact-${{ matrix.os }}-${{ matrix.python-version }}
           path: ./wheelhouse/*.whl
 
   pypi-publish:
