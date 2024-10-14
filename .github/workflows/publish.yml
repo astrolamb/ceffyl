@@ -9,12 +9,13 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v3
 
       - uses: actions/setup-python@v3
         with:
-          python-version: 3.11
+          python-version: ${{ matrix.python-version }}
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.2
@@ -24,6 +25,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: wheelhouse-${{ matrix.python-version }}
           path: ./wheelhouse/*.whl
 
   pypi-publish:
