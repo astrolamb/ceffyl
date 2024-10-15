@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v3
 
@@ -42,5 +42,3 @@ jobs:
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages_dir: artifact/
