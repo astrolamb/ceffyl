@@ -9,13 +9,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest]
-        python-version: ['3.9', '3.10', '3.11', '3.12']
     steps:
-      - uses: actions/checkout@v3
-
-      - uses: actions/setup-python@v3
+      - uses: actions/checkout@v4
+      - name: Set up python
+        uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.11
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.2
@@ -25,8 +24,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact-${{ matrix.os }}-${{ matrix.python-version }}
-          path: ./wheelhouse/*.whl
+          name: ceffyl-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist/
 
   pypi-publish:
     needs: ['build']
@@ -39,6 +38,9 @@ jobs:
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
+        with:
+          name: ceffyl-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist/
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
