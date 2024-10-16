@@ -24,7 +24,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ceffyl-${{ matrix.os }
+          name: ceffyl-${{ matrix.os }}
           path: ./wheelhouse/
 
   pypi-publish:
