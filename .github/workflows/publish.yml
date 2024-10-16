@@ -24,8 +24,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ceffyl-${{ matrix.os }}-${{ matrix.python-version }}
-          path: ./wheelhouse/*.whl
+          name: ceffyl-${{ matrix.os }
+          path: ./wheelhouse/
 
   pypi-publish:
     needs: ['build']
@@ -39,9 +39,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          path: ./wheelhouse/*.whl
+          path: ./wheelhouse/
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          path: ./wheelhouse/*.whl
+          path: ./wheelhouse/
