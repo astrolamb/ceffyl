@@ -42,6 +42,6 @@ jobs:
           path: ./wheelhouse/
 
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1.10.3
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: ./wheelhouse/
