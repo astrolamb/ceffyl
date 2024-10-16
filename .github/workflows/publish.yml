@@ -39,11 +39,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: ceffyl-${{ matrix.os }}-${{ matrix.python-version }}
           path: ./wheelhouse/*.whl
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          name: ceffyl-${{ matrix.os }}-${{ matrix.python-version }}
           path: ./wheelhouse/*.whl
