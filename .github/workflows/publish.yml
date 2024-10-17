@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: *.whl
+          pattern: '*.whl'
           path: ./wheelhouse/
           merge-multiple: true
 
