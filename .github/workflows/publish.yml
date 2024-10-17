@@ -20,12 +20,12 @@ jobs:
         uses: pypa/cibuildwheel@v2.16.2
         env:
           # Skip CPython 3.6 and CPython 3.7
-          CIBW_SKIP: cp36-* cp37-* pp*
+          CIBW_SKIP: cp36-* cp37-* pp* *_i686 *musllinux*
 
       - uses: actions/upload-artifact@v4
         with:
           name: ceffyl-${{ matrix.os }}
-          path: ./wheelhouse/*.whl 
+          path: ./wheelhouse/ 
 
   pypi-publish:
     needs: ['build']
@@ -39,8 +39,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: '*.whl'
           path: ./wheelhouse/
+          pattern: ceffyl-*
           merge-multiple: true
 
       - name: Publish package distributions to PyPI
