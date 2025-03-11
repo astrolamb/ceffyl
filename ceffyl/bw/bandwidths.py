@@ -40,7 +40,7 @@ from scipy import optimize
 @jit
 def _SD(n: float, d: ArrayLike, cnt: ArrayLike, h: float) -> float:
     """
-    Equation 12.1 from [1] for a Gaussian kernel, where r`$\phi^\mathrm{iv}$ is
+    Equation 12.1 from [1] for a Gaussian kernel, where r'$\phi^\mathrm{iv}$' is
     the fourth derivitive of the Gaussian.
 
     Parameters
@@ -57,7 +57,7 @@ def _SD(n: float, d: ArrayLike, cnt: ArrayLike, h: float) -> float:
     Returns
     -------
     float
-        The value of r`$\hat{S}_D(h)` from [1]
+        The value of r'$\hat{S}_D(h)' from [1]
 
     References
     ----------
@@ -79,7 +79,7 @@ def _SD(n: float, d: ArrayLike, cnt: ArrayLike, h: float) -> float:
 @jit
 def _TD(n: float, d: ArrayLike, cnt: ArrayLike, h: float) -> float:
     """
-    Equation 12.2 from [1] for a Gaussian kernel, where r`$\phi^\mathrm{iv}$ is
+    Equation 12.2 from [1] for a Gaussian kernel, where r'$\phi^\mathrm{iv}$' is
     the fourth derivitive of the Gaussian.
 
     Parameters
@@ -96,7 +96,7 @@ def _TD(n: float, d: ArrayLike, cnt: ArrayLike, h: float) -> float:
     Returns
     -------
     float
-        The value of r`$\hat{T}_D(h)` from [1]
+        The value of r'$\hat{T}_D(h)' from [1]
 
     References
     ----------
@@ -146,13 +146,13 @@ def _pairwise_binned_distance(
     dd = rang / nbin
 
     # pairwise binned distance
-    arr = jnp.rint(x / dd).astype(int)
+    arr = x / dd
     cnt = jnp.zeros(nbin).astype(int)
     idx = jnp.arange(n-1)
 
     print('Computing pairwise distances...')
     for i in range(1, n):
-        dists = jnp.abs(arr[i] - arr[idx[:i]])
+        dists = jnp.rint(jnp.abs(arr[i] - arr[idx[:i]])).astype(int)
         cnt = cnt.at[dists].add(1)
 
     return dd, cnt
