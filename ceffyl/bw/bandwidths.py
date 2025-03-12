@@ -115,7 +115,7 @@ def sj(x, nbin=1000, method='dpi', hmax=None):
     d, cnt = bw_den(nbin, x)
     SDh = lambda h: bw_phi4(n, d, cnt, h)
     TDh = lambda h: bw_phi6(n, d, cnt, h)
-    fSD = lambda h: (c1/SDh(alph2 * h*(5/7)))**0.2 - h
+    fSD = lambda h: (c1/SDh(alph2 * h**(5/7)))**0.2 - h
 
     TD = -TDh(b)
 

@@ -70,14 +70,16 @@ def bw_den(nbin, x):
     dd = rang/nbin
 
     # PAIRWISE BINNED DISTANCE
-    cdef long[:] arr = (x/dd).astype(int)
+    cdef double[:] arr = x / dd
     cdef long[:] cnt = np.zeros(nbin, dtype=int)
-    cdef int dists
+    cdef double dists
+    cdef long idx
 
     cdef int i, j
     for i in range(n):
         dists = arr[i]
         for j in range(i):
-            cnt[abs(dists - arr[j])] += 1
+            idx = np.rint(np.abs(dists - arr[j])).astype(int)
+            cnt[idx] += 1
 
     return dd, cnt
