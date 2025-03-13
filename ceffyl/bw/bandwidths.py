@@ -28,17 +28,12 @@ https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/bandwidth
 
 """
 
-from functools import partial
 import numpy as np
-from jax import jit
-import jax.numpy as jnp
-from jax import Array
-from jax.typing import ArrayLike
 from scipy import optimize
+from numba import jit, prange
 
 
-@jit
-def _SD(n: float, d: ArrayLike, cnt: ArrayLike, h: float) -> float:
+def _SD(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
     """
     Equation 12.1 from [1] for a Gaussian kernel, where r'$\phi^\mathrm{iv}$' is
     the fourth derivitive of the Gaussian.
@@ -47,9 +42,9 @@ def _SD(n: float, d: ArrayLike, cnt: ArrayLike, h: float) -> float:
     ----------
     n : float
         Number of samples
-    d : ArrayLike
+    d : np.ndarray
         Array of pairwise distances
-    cnt : ArrayLike
+    cnt : np.ndarray
         Array of counts of pairwise distances
     h : float
         Proposed bandwidth
@@ -68,16 +63,15 @@ def _SD(n: float, d: ArrayLike, cnt: ArrayLike, h: float) -> float:
 
     delta = (np.arange(cnt.shape[0]) * d / h)**2
 
-    term = (jnp.exp(-0.5*delta) *
+    term = (np.exp(-0.5*delta) *
             (delta**2 - 6*delta + 3))
-    s = 2 * jnp.sum(term * cnt) + (n * 3)
-    u = s / (n * (n-1) * h**5 * jnp.sqrt(2*jnp.pi))
+    s = 2 * np.sum(term * cnt) + (n * 3)
+    u = s / (n * (n-1) * h**5 * np.sqrt(2*np.pi))
 
     return u
 
 
-@jit
-def _TD(n: float, d: ArrayLike, cnt: ArrayLike, h: float) -> float:
+def _TD(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
     """
     Equation 12.2 from [1] for a Gaussian kernel, where r'$\phi^\mathrm{iv}$' is
     the fourth derivitive of the Gaussian.
@@ -86,9 +80,9 @@ def _TD(n: float, d: ArrayLike, cnt: ArrayLike, h: float) -> float:
     ----------
     n : float
         Number of samples
-    d : ArrayLike
+    d : np.ndarray
         Array of pairwise distances
-    cnt : ArrayLike
+    cnt : np.ndarray
         Array of counts of pairwise distances
     h : float
         Proposed bandwidth
@@ -105,20 +99,20 @@ def _TD(n: float, d: ArrayLike, cnt: ArrayLike, h: float) -> float:
         Journal of the Royal Statistical Society, Series B. 1991
     """
 
-    delta = (jnp.arange(cnt.shape[0]) * d / h)**2
+    delta = (np.arange(cnt.shape[0]) * d / h)**2
 
-    term = (jnp.exp(-0.5*delta) *
+    term = (np.exp(-0.5*delta) *
             (delta**3 - 15*(delta**2) + 45*delta - 15))
-    s = 2 * jnp.sum(term * cnt) - 15 * n
-    u = s / (n * (n-1) * h**7 * jnp.sqrt(2*jnp.pi))
+    s = 2 * np.sum(term * cnt) - 15 * n
+    u = s / (n * (n-1) * h**7 * np.sqrt(2*np.pi))
 
     return u
 
-@partial(jit, static_argnums=[0])
+@jit(nopython=True)
 def _pairwise_binned_distance(
         nbin: int,
-        x: ArrayLike
-        ) -> tuple[Array, Array]:
+        x: np.ndarray
+        ) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute the pairwise distance between samples. For memory efficiency, the
     distances are binned and counted.
@@ -127,38 +121,38 @@ def _pairwise_binned_distance(
     ----------
     nbin : int
         Number of bins
-    x : ArrayLike
+    x : np.ndarray
         Array of samples to compute KDE bandwidth
     
     Returns
     -------
-    tuple[Array, Array]
+    tuple[np.ndarray, np.ndarray]
         The first array is the binned distances, the second array is the number
         of distances within that bin.
     """
 
     n = x.shape[0]
 
-    xmin = jnp.min(x)
-    xmax = jnp.max(x)
+    xmin = np.min(x)
+    xmax = np.max(x)
 
     rang = (xmax-xmin) * 1.01
     dd = rang / nbin
 
     # pairwise binned distance
     arr = x / dd
-    cnt = jnp.zeros(nbin).astype(int)
-    idx = jnp.arange(n-1)
+    cnt = np.zeros(nbin, dtype=np.int32)
+    idx = np.arange(n-1)
 
     print('Computing pairwise distances...')
-    for i in range(1, n):
-        dists = jnp.rint(jnp.abs(arr[i] - arr[idx[:i]])).astype(int)
-        cnt = cnt.at[dists].add(1)
+    for i in prange(1, n):
+        dists = np.rint(np.abs(arr[i] - arr[idx[:i]])).astype(np.int32)
+        cnt[dists] += 1
 
     return dd, cnt
 
 
-def sj_dpi(x: ArrayLike, nbin: int=10000):
+def sj_dpi(x: np.ndarray, nbin: int=10000):
     """
     `sj_dpi` implements most of the methods of Sheather & Jones (1991) to select
     the bandwidth using pilot estimation of derivatives. This is the 'direct
@@ -171,7 +165,7 @@ def sj_dpi(x: ArrayLike, nbin: int=10000):
 
     Parameters
     ----------
-    x : ArrayLike
+    x : np.ndarray
         array of values to calculate bandwidth from
     bin : int
         number of bins to find pairwise distances
@@ -193,7 +187,7 @@ def sj_dpi(x: ArrayLike, nbin: int=10000):
         density estimation. Simon J. Sheather and Michael C. Jones.
         Journal of the Royal Statistical Society, Series B. 1991
     """
-    if jnp.isfinite(x).all() is False:
+    if np.isfinite(x).all() is False:
         raise ValueError("Input has non-finite elements")
 
     n = len(x)
@@ -203,12 +197,12 @@ def sj_dpi(x: ArrayLike, nbin: int=10000):
     if nbin < 0:
         raise ValueError("`nbin` must be a positive number")
 
-    c1 = 1 / (2 * jnp.sqrt(jnp.pi) * n)
-    iqr = jnp.subtract(*jnp.percentile(x, jnp.array([75, 25])))
-    scale = jnp.min(jnp.array([jnp.std(x), iqr/1.349]))
+    c1 = 1 / (2 * np.sqrt(np.pi) * n)
+    iqr = np.subtract(*np.percentile(x, np.array([75, 25])))
+    scale = np.min(np.array([np.std(x), iqr/1.349]))
     b = 1.230 * scale * n**(-1/9)
 
-    d, cnt = _pairwise_binned_distance(nbin, x)
+    d, cnt = _pairwise_binned_distance(nbin, np.array(x))
 
     TDb = -_TD(n, d, cnt, b)  # TDh
 
@@ -221,21 +215,20 @@ def sj_dpi(x: ArrayLike, nbin: int=10000):
     return res
 
 
-@jit
 def fSD(
         h: float,
         c1: float,
         alph2: float,
         n: float,
-        d: ArrayLike,
-        cnt: ArrayLike
+        d: np.ndarray,
+        cnt: np.ndarray
         ) -> float:
     """Function to call _SD for Newton-Raphson method to solve Eq. 12"""
     SDh = _SD(n, d, cnt, alph2 * h**(5/7))
     return (c1 / SDh)**0.2 - h
 
 
-def sj_ste(x: ArrayLike,
+def sj_ste(x: np.ndarray,
            nbin: float=10000,
            hmin: bool=None,
            hmax: bool=None,
@@ -254,7 +247,7 @@ def sj_ste(x: ArrayLike,
 
     Parameters
     ----------
-    x : ArrayLike
+    x : np.ndarray
         array of values to calculate bandwidth from
     bin : int
         number of bins to find pairwise distances
@@ -277,7 +270,7 @@ def sj_ste(x: ArrayLike,
         Journal of the Royal Statistical Society, Series B. 1991
     """
 
-    if jnp.isfinite(x).all() is False:
+    if np.isfinite(x).all() is False:
         raise ValueError("Input has non-finite elements")
 
     if nbin <= 0:
@@ -287,13 +280,14 @@ def sj_ste(x: ArrayLike,
     if n < 2:
         raise ValueError("Array must have two or more elements")
 
-    c1 = 1 / (2*jnp.sqrt(jnp.pi) * n)
-    iqr = jnp.subtract(*jnp.percentile(x, jnp.array([75, 25])))
-    scale = jnp.min(jnp.array([jnp.std(x), iqr/1.349]))
+    c1 = 1 / (2*np.sqrt(np.pi) * n)
+    iqr = np.subtract(*np.percentile(x, np.array([75, 25])))
+    scale = np.min(np.array([np.std(x), iqr/1.349]))
     a = 1.241 * scale * n**(-1/7)
     b = 1.230 * scale * n**(-1/9)
 
-    d, cnt = _pairwise_binned_distance(nbin, x)
+    d, cnt = _pairwise_binned_distance(nbin, np.array(x))
+    d, cnt = np.array(d), np.array(cnt)
 
     TDb = -_TD(n, d, cnt, b)
     SDa = _SD(n, d, cnt, a)
