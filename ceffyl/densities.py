@@ -78,7 +78,7 @@ class DE_factory:
         """
         pass
 
-    def bandwidth(self, data, bw_func=bw.sj, thin_chain=False,
+    def bandwidth(self, data, bw_func=bw.sj_ste, thin_chain=False,
                   kernel_constant=1, bw_kwargs={}):
         """
         Method to calculate bandwidth for a given MCMC chain
@@ -203,7 +203,7 @@ class DE_factory:
 
     def setup_densities(self, rho_grid=np.linspace(-15.5, 0, 1551),
                         log_infinitessimal=-36., save_density=True,
-                        outdir='chain/', kde_func='FFTKDE', bandwidth=bw.sj,
+                        outdir='chain/', kde_func='FFTKDE', bandwidth=bw.sj_ste,
                         kernel='epanechnikov', bw_thin_chain=False,
                         kde_thin_chain=False, change_nans=True, bw_kwargs={},
                         kde_kwargs={}, bootstrap=False, Nbootstrap=None):
