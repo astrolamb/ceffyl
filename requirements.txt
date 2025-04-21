@@ -1,6 +1,5 @@
-Cython==0.29.37
 encor==1.1.2
-enterprise_extensions==2.4.2
+enterprise_extensions==2.4.4
 enterprise_pulsar==3.4.1
 h5py==3.11.0
 holodeck==0.3.1
