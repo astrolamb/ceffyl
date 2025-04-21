@@ -19,7 +19,7 @@ setup(
     install_requires=[
         "encor>=1.1.2",
         "enterprise-pulsar>=3.4.4,<4.0.0",
-        "enterprise_extensions>=2.4.2,<3.0.0",
+        "enterprise_extensions>=3.0.2,<4.0.0",
         "h5py>=3.11.0,<4.0.0",
         "kalepy>=1.4,<2.0.0",
         "KDEpy>=1.1.0,<2.0.0",

@@ -1,6 +1,6 @@
 encor==1.1.2
-enterprise_extensions==2.4.4
-enterprise_pulsar==3.4.1
+enterprise_extensions==3.0.2
+enterprise_pulsar==3.4.4
 h5py==3.11.0
 holodeck==0.3.1
 kalepy==1.4.3
