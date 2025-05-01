@@ -8,23 +8,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest]
+        os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v3
-
-      - uses: actions/setup-python@v3
+      - uses: actions/checkout@v4
+      - name: Set up python
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.2
-        env:
-          # Skip CPython 3.6 and CPython 3.7
-          CIBW_SKIP: cp36-* cp37-* pp*
+      - run: |
+          pip install poetry
+          poetry build
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          path: ./wheelhouse/*.whl
+          name: ceffyl-${{ matrix.os }}
+          path: ./dist/ 
 
   pypi-publish:
     needs: ['build']
@@ -36,9 +35,13 @@ jobs:
       # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
+        with:
+          path: ./dist/
+          pattern: ceffyl-*
+          merge-multiple: true
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages_dir: artifact/
+          packages-dir: artifact/

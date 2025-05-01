@@ -52,6 +52,8 @@ import numpy as np
 from ceffyl import models
 from .parameter import Uniform
 from .utils import frequencies
+from typing import Any
+from numpy.typing import NDArray
 from types import ModuleType
 
 
@@ -168,14 +170,15 @@ class Spectrum:
             tspan = np.zeros(len(psrs))
             [tspan[ii] = p.tspan for ii, p in enumerate(psrs)]
 
+        # saving metadata to class
         self.psd = psd
         self.psd_priors = params
         self.n_priors = len(params)
         self.const_params = const_params
         self.psd_kwargs = psd_kwargs
-        self.psr_idx = []  # to be save later in GFL class
+        self.psr_idx = []  # to be save later in Ceffyl class
 
-        # save information if signal is common to all pulsars
+        # save this information if signal is common to all pulsars
         if common_process:
             self.cp = True
             self.selected_psrs = selected_psrs
@@ -187,13 +190,13 @@ class Spectrum:
                 else:
                     param_names.extend([f'{name}{p.name}_{ii}'
                                         for ii in range(p.size)])
-
             self.param_names = param_names
             self.n_params = len(param_names)
             self.params = params
+            self.length = len(params)
+
             # tuple to reshape xs for vectorised computation
             self.reshape = (1, 1, len(params))
-            self.length = len(params)
 
         # else save this information if signal is not common
         # it essentially multiplies lists across psrs for easy mapping
@@ -226,53 +229,70 @@ class Spectrum:
                             len(params))
             self.length = len(self.params)
 
-    def get_logpdf(self, xs):
+            # tuple to reshape xs for vectorised computation
+            self.reshape = (1, len(selected_psrs), len(params))
+
+    def get_logpdf(self, xs: NDArray) -> float:
         """
         A method to calculate total logpdf of proposed values
 
-        //Input//
-        @param xs: array of proposed values corresponding to signal params
-                   Size=(number of kwargs, number of psrs)
+        Parameters
+        -----
+        xs : NDArray 
+            array of parameter values
 
-        @return logpdf: summed logpdf of proposed parameter
+        Returns
+        -------
+        logpdf : float
+            logpdf of proposed parameters for the given models and parameters
         """
         # require 2 x sum of list of arrays
         return np.sum([p.get_logpdf(x) for p, x in zip(self.params, xs)])
 
-    def get_rho(self, freqs, mapped_xs, tspan):
+    def get_rho(self,
+                freqs: NDArray,
+                mapped_xs: dict[str, Any],
+                tspan: float
+                ) -> NDArray:
         """
         A method to calculate PSD of proposed values from given psd function
 
-        //Input//
-        @param freqs: Array of PTA frequencies. NOTE: function expects number
-                      of frequencies to be greater than or equal to number
-                      of frequencies specified for this signal (N_freqs)
+        Parameters
+        ----------
+        freqs : NDArray
+            Array of PTA frequencies. NOTE: function assumes number of
+            frequencies to be greater than or equal to number of frequencies
+            specified for this Signal object (N_freqs)
 
-        @param mapped_xs: mapped dictionary of proposed values corresponding to
-                          signal params
+        mapped_xs : dict[str, Any]
+            mapped dictionary of proposed values corresponding to Signal params
 
-        @return rho: array of PSDs in shape (N_p x N_f)
+        Returns
+        -------
+        rho : NDArray
+            array of PSDs in shape (N_p x N_f)
         """
         rho = self.psd(freqs, tspan, **mapped_xs, **self.const_params,
                        **self.psd_kwargs).T
 
         return rho
 
-    def sample(self):
+    def sample(self) -> NDArray:
         """
         Method to derive a list of samples from varied parameters
 
-        @return samples: array of samples from each parameter
+        Returns
+        -------
+        samples : NDArray
+            array of samples from each parameter
         """
         return np.hstack([p.sample() for p in self.params])
 
 
 class Ceffyl:
     """
-    // Ceffyl //
-
     A class to fit signals to free spectra to derive the signals' spectral
-    characteristics
+    characteristics via sampling methods
     """
     def __init__(self, pulsar_list: list[Pulsar] = None,
                  spectra: list[Spectrum] = None,):
@@ -283,7 +303,7 @@ class Ceffyl:
             pulsar_list: A list of Pulsar objects
         """
 
-        # saving properties
+        # storing frequency metadata
         self.freqs = np.load(f'{datadir}/freqs.npy')
         self.n_freqs = self.freqs.size
         self.reshaped_freqs = self.freqs.reshape((1, self.N_freqs)).T
@@ -312,11 +332,10 @@ class Ceffyl:
 
         # find index of sublist
         file_psrs = list(np.loadtxt(f'{datadir}/pulsar_list.txt',
-                                    dtype=np.unicode_,
-                                    ndmin=1))
+                                    dtype=np.unicode_, ndmin=1))
         selected_psrs = [file_psrs.index(p) for p in self.pulsar_list]
 
-        # load densities from npy binary file for given psrs, freqs
+        # load densities from npy binary file for given psrs
         density_file = f'{datadir}/density.npy'
         density = np.load(density_file, allow_pickle=True)[selected_psrs]
 
@@ -324,24 +343,44 @@ class Ceffyl:
 
         self.cp_signals, self.red_signals = [], []
 
-    def add_signals(self, signals, inverse_transform=False,
-                    nested_posterior_sample_size=10000):
+    def add_signals(self,
+                    signals: list[MethodType],
+                    inverse_transform: bool = False,
+                    nested_posterior_sample_size: int = 100000
+                    ) -> MethodType:
         """
-        Method to add signals to the ceffyl object
+        Method to add signals to the ceffyl object.
+        Note: using this method erases previous signals added to instance!
 
-        @param nested_posterior_sample_size: number of sample to setup
-                                             posterior histograms for nested
-                                             sampling
+        TO DO
+        -----
+            * ensure that adding signals doesn't erase previously added signals
+            * intrinsic red noise free spectrum
+
+        Parameters
+        ----------
+        signals : list[MethodType]
+            list of Ceffyl.signal objects
+        inverse_transform : bool
+            flag to compute inverse transforms for use in nested samplers.
+            Will soon be depreciated in favour of computing point-percentile
+            functions
+        nested_posterior_sample_size : int
+            number of samples to setup posterior histograms for nested sampling
+
+        Raises
+        ------
+        TypeError
+            if signals aren't supplied as a list
+        ValueError
+            if pulsars defined in signal object mismatch pulsars in dataset
         """
 
         # check if signals is a list
         if not isinstance(signals, list):
             raise TypeError("Please supply of signals as a list")
 
-        # set number of freqs to max number of freqs of signals
-        # self.N_freqs = max([s.N_freqs for s in signals])
-
-        # check if pulsars in signals are in density array
+        # cycle through signals and defined pulsar names
         for s in signals:
             if s.selected_psrs is None:
                 s.selected_psrs = self.pulsar_list
@@ -351,10 +390,11 @@ class Ceffyl:
             if not np.isin(s.selected_psrs, self.pulsar_list).all():
                 raise ValueError('Mismatch between density array pulsars and'
                                  'the pulsars you selected')
-
             else:  # save idx of (subset of) psrs within larger list
                 s.psr_idx = np.array([list(self.pulsar_list).index(p)
                                       for p in s.selected_psrs])
+            
+            self.N_psrs = len(s.selected_psrs)  # save number of psrs
 
         # precomputing parameter locations in proposed arrays
         idx = 0
@@ -381,9 +421,9 @@ class Ceffyl:
                                                    s.N_priors)))
                     else:
                         if len(s.psd_priors) > 1:
-                            print("Sorry, ceffyl can't manage more than one"
-                                  " parameter if a parameter has size > 1")
-                            raise TypeError
+                            raise TypeError("Sorry, ceffyl can't manage more" +
+                                            " than one parameter if a " +
+                                            "parameter has size > 1")
                         else:
                             npsr = len(s.selected_psrs)
                             array = np.arange(id_irn+ii, id_irn+npsr*p.size)
@@ -396,12 +436,11 @@ class Ceffyl:
 
                 s.pmap = pmap
 
-        # create list of idx grids
+        # create list of index grids for vectorised searching
         for s in signals:
             s.ixgrid = np.ix_(s.psr_idx, s.freq_idxs)
 
-        # save array of signals
-        self.signals = signals
+        self.signals = signals  # save array of signals
 
         # save complete array of parameters
         self.param_names = list(np.hstack([s.param_names for s in signals]))
@@ -417,6 +456,8 @@ class Ceffyl:
 
         # information for nested sampling
         if inverse_transform:
+            print('Inverse transform sampling method will soon be depreciated')
+            print('Please update your version of enterprise to use PPF')
             posterior_samples, hist_cumulative, binmid = [], [], []
             for s in self.signals:  # iterate through signals
                 # if binmid is None:
@@ -439,16 +480,20 @@ class Ceffyl:
             self.hist_cumulative = hist_cumulative
             self.binmid = binmid
 
-        return self
-
-    def ln_prior(self, xs):
+    def ln_prior(self, xs: NDArray) -> float:
         """
-        vectorised log prior function for PTMCMC to calculate logpdf of
-        proposed values given their parameter distribution
+        log prior function for PTMCMC to calculate logpdf of
+        proposed parameters given their prior distribution
 
-        @param xs: proposed value array
+        Parameters
+        ----------
+        xs : NDArray
+            proposed parameters
 
-        @return logpdf: total logpdf of proposed values given signal parameters
+        Returns
+        -------
+        logpdf : float
+            summed logpdf of proposed parameters given signal priors
         """
         logpdf = 0  # total logpdf
         for s in self.signals:  # iterate through signals
@@ -458,33 +503,9 @@ class Ceffyl:
 
         return logpdf
 
-    def transform_uniform(self, u):
-        """
-        prior function for using in nested samplers
-
-        it transforms the N-dimensional unit cube u to our prior range of
-        interest
-
-        NOTE: assumes uniform priors
-
-        @param u: N-dimensional unit cube
-        @return x: transformed prior
-        """
-
-        x = u.copy()  # copy hypercube
-
-        for s in self.signals:  # iterate through signals
-            for ii, p in enumerate(s.pmap):
-                prior_min = s.psd_priors[ii].prior._defaults['pmin']
-                prior_max = s.psd_priors[ii].prior._defaults['pmax']
-                prior_diff = prior_max - prior_min
-
-                x[p] = x[p]*prior_diff + prior_min
-
-        return x
-
     def transform_histogram(self, xs):
         """
+        WILL SOON BE DEPRECIATED
         prior function for using in nested samplers
 
         it transforms the N-dimensional unit cube u to our prior range of
@@ -503,30 +524,45 @@ class Ceffyl:
                                  self.binmid[ii])
 
         return x
-
-    def hypercube(self, xs):
+    
+    def hypercube(self, xs : NDArray) -> NDArray:
         """
         function to compute ppf of the prior to use in nested sampling
-        REQUIRES: enterprise fork by vhaasteren:
-        git@github.com:vhaasteren/enterprise.git
 
-        @param xs: proposed value array
+        Parameters
+        ----------
+        xs : NDArray
+            proposed parameters
+
+        Returns
+        -------
+        transformed_priors : NDArray
+            array of point-percentile function of parameters given priors
         """
-
-        transformed_priors = np.array(
-            [p.ppf(x) for p, x in zip(self.params, xs)]
-        )
+        transformed_priors = np.empty_like(xs)  # initialise empty array
+        for ii, p in enumerate(self.params):    # iterate through signals
+            transformed_priors[ii] = p.ppf(xs[ii])
 
         return transformed_priors
 
-    def ln_likelihood(self, xs):
+    def ln_likelihood(self, xs: NDArray) -> np.float64:
         """
         vectorised log likelihood function for PTMCMC to calculate logpdf of
         proposed values given KDE density array
 
-        @param xs: proposed value array
+        TO DO
+        -----
+            * trapesium rule integration
 
-        @return logpdf: total logpdf of proposed values given KDE density array
+        Parameters
+        ----------
+        xs : NDArray
+            proposed parameters
+
+        Returns
+        -------
+        logpdf : np.float64
+            total logpdf of proposed values given KDE density array
         """
 
         # initalise array of rho values with lower prior boundary
@@ -553,7 +589,11 @@ class Ceffyl:
 
         # search for location of logrho values within grid
         idx = np.searchsorted(self.binedges, logrho) - 1
+    
+        idx[idx < 0] = 0  # if spectrum less than logrho, set to bottom boundary
 
+        # if any spectrum greater than top boundary, set logprob to -np.inf
+        # else compute probability given data
         if (idx >= self.rho_grid.shape[0]).any():
             return -np.inf
 
@@ -564,11 +604,14 @@ class Ceffyl:
         logpdf += np.log(self.db)  # integration infinitessimal
         return np.sum(logpdf)
 
-    def initial_samples(self):
+    def initial_samples(self) -> NDArray:
         """
         A method to return an array of initial random samples for PTMCMC
 
-        @return x0: array of initial samples
+        Returns
+        -------
+        x0 : NDArray
+            array of sample parameters
         """
         x0 = np.hstack([s.sample() for s in self.signals])
         return x0
