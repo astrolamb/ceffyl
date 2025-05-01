@@ -104,15 +104,15 @@ class JumpProposal(object):
 
                     # no need to extend if hist edges are already prior min/max
                     if isinstance(emp_dist, EmpiricalDistribution2D):
-                        if not(emp_dist._edges[ii][0] == prior_min and
-                               emp_dist._edges[ii][-1] == prior_max):
+                        if not (emp_dist._edges[ii][0] == prior_min and
+                                emp_dist._edges[ii][-1] == prior_max):
 
                             prior_ok = False
                             continue
 
                     elif isinstance(emp_dist, EmpiricalDistribution2DKDE):
-                        if not(emp_dist.minvals[ii] == prior_min and
-                               emp_dist.maxvals[ii] == prior_max):
+                        if not (emp_dist.minvals[ii] == prior_min and
+                                emp_dist.maxvals[ii] == prior_max):
 
                             prior_ok = False
                             continue
@@ -271,7 +271,7 @@ class JumpProposal(object):
         q[pidx] = rand
 
         # forward-backward jump probability
-        lqxy = p.get_logpdf(x[pidx] - q[pidx])
+        lqxy = p.get_logpdf(x[pidx]) - p.get_logpdf(q[pidx])
 
         return q, float(lqxy)
 
@@ -299,7 +299,7 @@ class JumpProposal(object):
         q[pidx] = p.sample()
 
         # forward-backward jump probability
-        lqxy = p.get_logpdf(x[pidx] - q[pidx])
+        lqxy = p.get_logpdf(x[pidx]) - p.get_logpdf(q[pidx])
 
         return q, float(lqxy)
 
@@ -319,9 +319,9 @@ class JumpProposal(object):
         lqxy = 0
 
         # randomly choose parameter
-        #p_name = np.random.choice(self.gw_names)
-        #pidx = self.param_names.index(p_name)
-        #p = self.params[pidx]
+        # p_name = np.random.choice(self.gw_names)
+        # pidx = self.param_names.index(p_name)
+        # p = self.params[pidx]
 
         p = np.random.choice(self.params)
         pidx = self.params.index(p)
@@ -342,7 +342,7 @@ class JumpProposal(object):
         q[pidx] = rand
 
         # forward-backward jump probability
-        lqxy = p.get_logpdf(x[pidx] - q[pidx])
+        lqxy = p.get_logpdf(x[pidx]) - p.get_logpdf(q[pidx])
 
         return q, float(lqxy)
 
@@ -438,10 +438,16 @@ def setup_sampler(ceffyl, outdir, logL, logp, resume=True, jump=True,
 
         # make a group for each signal, with all non-global parameters
         for s in ceffyl.signals:
-            groups.extend(s.pmap)
+            groups.append(list(np.hstack(s.pmap)))
 
             if s.CP:  # visit GW signals x5 more often
-                [groups.extend(s.pmap) for ii in range(5)]
+                [groups.append(list(np.hstack(s.pmap))) for ii in range(10)]
+
+        # make a group for each pulsar
+        for p in ceffyl.pulsar_list:
+            if p != 'freespec':
+                groups.append([ceffyl.param_names.index(pn) for pn in
+                               ceffyl.param_names if p in pn])
 
     # sampler
     sampler = ptmcmc(ceffyl.ndim, logL, logp, cov,
@@ -473,7 +479,7 @@ def setup_sampler(ceffyl, outdir, logL, logp, resume=True, jump=True,
         # Red noise prior draw
         if red_noise:
             print('Adding red noise prior draws...\n')
-            sampler.addProposalToCycle(jp.draw_from_red_prior, 50)
+            sampler.addProposalToCycle(jp.draw_from_red_prior, 10)
 
         # GWB uniform distribution draw
         if gw_signal:

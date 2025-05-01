@@ -15,12 +15,23 @@ from natsort import natsorted
 from numpy.typing import NDArray
 from types import MethodType
 from typing import Any
-
+import itertools
 try:
     import kalepy as kale
 except ImportError:
     print('kalepy cannot be found. You cannot use this if you wanted it')
     pass
+try:
+    from joblib import Parallel, delayed
+    no_joblib = False
+except ImportError:
+    no_joblib = True
+    print('joblib cannot be found. You cannot setup densities for multiple pulsars simultaneously.')
+    pass
+from KDEpy import FFTKDE
+import warnings
+import os
+from natsort import natsorted
 
 
 class DE_factory:
@@ -103,7 +114,7 @@ class DE_factory:
 
     def bandwidth(self,
                   data: NDArray,
-                  bw_func: MethodType = bw.sj,
+                  bw_func: MethodType = bw.sj_ste,
                   thin_chain: bool = False,
                   kernel_constant: float = 1.,
                   bw_kwargs: dict[str, Any] = {}) -> float:
@@ -254,7 +265,7 @@ class DE_factory:
                         save_density: bool = True,
                         outdir: str = 'chain/',
                         kde_func: str = 'FFTKDE',
-                        bandwidth: float | MethodType | str = bw.sj,
+                        bandwidth: float | MethodType | str = bw.sj_ste,
                         kernel: str = 'epanechnikov',
                         bw_thin_chain: bool = False,
                         kde_thin_chain: bool = False,
@@ -262,7 +273,8 @@ class DE_factory:
                         bw_kwargs: dict[str, Any] = {},
                         kde_kwargs: dict[str, Any] = {},
                         bootstrap: bool = False,
-                        Nbootstrap: int = None) -> NDArray:
+                        Nbootstrap: int = None,
+                        num_threads : int = 1) -> NDArray:
         """
         A method to setup densitites for all chains and save them as a .npy
         file
@@ -300,6 +312,9 @@ class DE_factory:
             flag to bootstrap samples
         Nbootstrap : int
             number of samples to bootstrap if `bootstrap=True`
+        num_threads : int
+            number of CPU threads to use to calculate multiple 
+                            pulsars' densities simultaneously
 
         Returns
         -------
@@ -319,7 +334,9 @@ class DE_factory:
 
         # calculating densities for each freq for each psr
         pdfs, bws = [], []
-        for ii, c in enumerate(self.corelist):
+        def doit(ii):
+            pdfs_in, bws_in = [], []
+            c = self.corelist[ii]
             print(f'Computing densities for psr {ii}', flush=True)
             core = co.Core(corepath=c)
 
@@ -343,13 +360,30 @@ class DE_factory:
                                         **bw_kwargs)
                 else:
                     bw = bandwidth
-                bws.append(bw)  # save bandwidths
+
+                bws_in.append(bw)  # save bandwidths
 
                 # calculate pdf along grid points and save
-                pdfs.append(self.density(data, bw, kernel=kernel,
+                pdf = self.density(data, bw, kernel=kernel,
                                          rho_grid=rho_grid, kde_func=kde_func,
                                          thin_chain=kde_thin_chain,
-                                         **kde_kwargs))
+                                         **kde_kwargs)
+                pdfs_in.append(pdf)
+            return pdfs_in, bws_in
+        
+        if no_joblib:
+            ansp = []
+            for ii in range(len(self.corelist)):
+                ansp.append(doit(ii))
+        else:
+            ansp = Parallel(n_jobs=num_threads)(delayed(doit)(ii) for ii in range(len(self.corelist)))
+
+        for ii in range(len(ansp)):
+            pdfs.append(ansp[ii][0])
+            bws.append(ansp[ii][1])
+        del ansp
+        pdfs = list(itertools.chain.from_iterable(pdfs))
+        bws = list(itertools.chain.from_iterable(bws))
 
         # reshape array of densities
         pdfs = np.array(pdfs).reshape(self.N_psrs, self.N_freqs, len(rho_grid))

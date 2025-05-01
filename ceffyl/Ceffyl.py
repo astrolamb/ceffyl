@@ -309,9 +309,11 @@ class ceffyl():
 
         # precomputing parameter locations in proposed arrays
         id = 0
+        self.cp_signals, self.red_signals = [], []
         for s in signals:
             pmap = []
             if s.CP:
+                self.cp_signals.append(s)
                 for p in s.params:
                     if p.size is None or p.size == 1:
                         pmap.append(list(np.arange(id, id+1)))
@@ -322,10 +324,12 @@ class ceffyl():
                 s.pmap = pmap
 
             else:
+                self.red_signals.append(s)
                 id_irn = id
                 for ii, p in enumerate(s.psd_priors):
                     if p.size is None or p.size == 1:
-                        pmap.append(list(np.arange(id_irn+ii, id_irn+s.N_params,
+                        pmap.append(list(np.arange(id_irn+ii,
+                                                   id_irn+s.N_params,
                                                    s.N_priors)))
                     else:
                         if len(s.psd_priors) > 1:
@@ -336,12 +340,12 @@ class ceffyl():
                             npsr = len(s.selected_psrs)
                             array = np.arange(id_irn+ii, id_irn+npsr*p.size)
                             pmap.extend(list(array.reshape(npsr, p.size)))
-                            
+
                 if p.size is None or p.size == 1:
                     id += s.N_params
                 else:
                     id += npsr * p.size
-                
+
                 s.pmap = pmap
 
         # create list of index grids for vectorised searching
@@ -355,6 +359,10 @@ class ceffyl():
         self.params = list(np.hstack([s.params for s in signals]))
         self.ndim = len(self.param_names)
 
+        # only use max number of frequencies
+        # TODO: check if this works when using freq_idxs
+        self.N_freqs = max([s.N_freqs for s in signals])
+
         # setup empty 2d grid to vectorize product of pdfs
         self._I, self._J = np.ogrid[:self.N_psrs, :self.N_freqs]
 
@@ -364,18 +372,21 @@ class ceffyl():
             print('Please update your version of enterprise to use PPF')
             posterior_samples, hist_cumulative, binmid = [], [], []
             for s in self.signals:  # iterate through signals
-                #if binmid is None:
+                # if binmid is None:
                 for ii, p in enumerate(s.params):
                     if p.size is None or p.size == 1:
-                        posterior_samples = [s.psd_priors[ii].sample() for jj in
-                                            range(nested_posterior_sample_size)]
+                        posterior_samples = [
+                            s.psd_priors[ii].sample() for jj in
+                            range(nested_posterior_sample_size)
+                            ]
                         hist, bin_edges = np.histogram(posterior_samples,
-                                                    bins='fd')
+                                                       bins='fd')
                         hist_cumulative.append(np.cumsum(hist/hist.sum()))
                         binmid.append((bin_edges[:-1] + bin_edges[1:])/2)
                     else:
                         # FIX ME: nested sampling for free spec irn
-                        print('Free spectrum not supported with nested sampling yet!')
+                        print('Free spectrum not supported with nested ' +
+                              'sampling yet!')
                         hist_cumulative, binmid = None, None
 
             self.hist_cumulative = hist_cumulative
@@ -429,8 +440,6 @@ class ceffyl():
     def hypercube(self, xs : NDArray) -> NDArray:
         """
         function to compute ppf of the prior to use in nested sampling
-        REQUIRES: enterprise fork by vhaasteren:
-        git@github.com:vhaasteren/enterprise.git
 
         Parameters
         ----------
@@ -469,29 +478,43 @@ class ceffyl():
         """
 
         # initalise array of rho values with lower prior boundary
-        rho = np.ones((self.N_psrs, self.N_freqs)) * 10**(2*self.rho_grid[0])
-        for s in self.signals:  # iterate through signals
+        red_rho = np.zeros((self.N_psrs, self.N_freqs))
+        cp_rho = np.zeros((self.N_psrs, self.N_freqs))
+        for s in self.red_signals:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
             mapped_xs = {s_i.name: xs[p]
                          for p, s_i in zip(s.pmap, s.params)}
-            rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
-                                       Tspan=self.Tspan, mapped_xs=mapped_xs)
+            red_rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
+                                           Tspan=self.Tspan,
+                                           mapped_xs=mapped_xs)
 
+        for s in self.cp_signals:  # iterate through CP signals
+            # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
+            mapped_xs = {s_i.name: xs[p]
+                         for p, s_i in zip(s.pmap, s.params)}
+            cp_rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
+                                          Tspan=self.Tspan,
+                                          mapped_xs=mapped_xs)
+
+        rho = red_rho + cp_rho  # total rho
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
 
         # search for location of logrho values within grid
         idx = np.searchsorted(self.binedges, logrho) - 1
-        
+    
         idx[idx < 0] = 0  # if spectrum less than logrho, set to bottom boundary
 
         # if any spectrum greater than top boundary, set logprob to -np.inf
         # else compute probability given data
         if (idx >= self.rho_grid.shape[0]).any():
             return -np.inf
-        else:
-            logpdf = self.density[self._I, self._J, idx]
-            logpdf += np.log(self.db)  # integration infinitessimal
-            return np.sum(logpdf)
+
+        idx[idx < 0] = 0  # if spectrum less than logrho, set to lower boundary
+
+        logpdf = self.density[self._I, self._J, idx]  # logpdf of rho values
+
+        logpdf += np.log(self.db)  # integration infinitessimal
+        return np.sum(logpdf)
 
     def initial_samples(self) -> NDArray:
         """

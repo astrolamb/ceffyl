@@ -7,19 +7,30 @@ Pronounced /ˈkɛfɨ̞l/ **('keff-ill')**, meaning 'horse' in Cymraeg/Welsh 🏴
 
 A software package to rapidly and flexibly analyse pulsar timing array (PTA) data via refiting to pulsar timing free spectra.
 
-This can be done by fitting to a free spectrum of the entire PTA or to individual pulsars!
+This can be done by fitting to a free spectrum of the entire PTA or individual pulsars!
 
 ## Installation
 
-To install via `pip', simply use PyPi:
+It is *highly recommended* that you install enterprise-pulsar first via conda-forge before installing ceffyl
+
+To install via `pip'
 ```bash
+conda create -n new_env python=3.10
+conda activate <new_env>
 pip install ceffyl
+pip install --no-deps enterprise-pulsar
 ```
 
 To install via Anaconda:
 ```bash
+conda create -n <new_env> python enterprise-pulsar
+conda activate <new_env>
 conda install -c conda-forge ceffyl
 ```
+**Then update to the latest version using github and pip!**
+
+This is because we use enterprise as a dependency. Enterprise requires tempo2. Tempo2 is notoriously difficult to install directly...
+We plan to remove this dependency in a future update.
 
 ## data
 Download representations of PTA data to accurately fit spectral models with ceffyl!
@@ -30,8 +41,8 @@ Download representations of PTA data to accurately fit spectral models with ceff
 - **IPTA DR2** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5787557.svg)](https://doi.org/10.5281/zenodo.5787557)
     - [PTA free spectrum refit data](https://github.com/astrolamb/ceffyl/tree/main/data/IPTA_DR2)
 
-- **NANOGrav 12.5-year data set** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4312297.svg)](https://doi.org/10.5281/zenodo.4312297)
-    - [PTA free spectrum refit data (zipped)](https://nanograv.org/science/data/nanograv-125y-kde-representation-ceffyl)
+- **NANOGrav 12.5-year data set** [![DOI](https://zenodo.org/badge/DOI/10.3847/2041-8213/abd401.svg)](https://doi.org/10.3847/2041-8213/abd401)
+    - [PTA free spectrum refit data (zipped)](https://zenodo.org/records/10519423)
 
 ## examples
 
@@ -49,12 +60,14 @@ Do you have your own free spectrum posteriors that you want to work in ceffyl? L
 ## Attribution
 
 ```bash
-@misc{lamb2023need,
-      title={The Need For Speed: Rapid Refitting Techniques for Bayesian Spectral Characterization of the Gravitational Wave Background Using PTAs}, 
-      author={William G. Lamb and Stephen R. Taylor and Rutger van Haasteren},
-      year={2023},
-      eprint={2303.15442},
-      archivePrefix={arXiv},
-      primaryClass={astro-ph.HE}
+@article{lamb2023rapid,
+  title={Rapid refitting techniques for Bayesian spectral characterization of the gravitational wave background using pulsar timing arrays},
+  author={Lamb, William G and Taylor, Stephen R and van Haasteren, Rutger},
+  journal={Physical Review D},
+  volume={108},
+  number={10},
+  pages={103019},
+  year={2023},
+  publisher={APS}
 }
 ```
