@@ -1,4 +1,5 @@
-"""Classes to create noise spectra and a parallel tempered PTMCMCSampler
+"""
+Classes to create noise spectra and a parallel tempered PTMCMCSampler
 object to fit spectral models to a free spectrum of pular timing array data.
 
 The Ceffyl class is a class to fit sources' spectra to a compressed
@@ -50,8 +51,8 @@ import os
 import webbrowser
 import numpy as np
 from ceffyl import models
-from .parameter import Uniform
-from .utils import frequencies
+from ceffyl.parameter import Uniform
+from ceffyl.utils import frequencies
 from typing import Any
 from numpy.typing import NDArray
 from types import ModuleType
