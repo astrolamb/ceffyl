@@ -1,7 +1,29 @@
 [build-system]
-requires = ["setuptools", "wheel", "numpy>=1.23.5,<2.0.0"]
+requires = ["setuptools>=61.0", "wheel", "numpy>=1.23.5,<2.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name='ceffyl'
-version='1.41'
+name = "ceffyl"
+version = "1.41"
+description = "Software to rapidly and flexibly analyse Pulsar Timing Array data via factorised likelihood methods (Lamb et al. 2023)"
+authors = [
+  { name = "William G. Lamb", email = "william.g.lamb@vanderbilt.edu" },
+]
+readme = { file = "README.md", content-type = "text/markdown" }
+dependencies = [
+    "encor>=1.1.5",
+    "enterprise-pulsar>=3.4.4,<4.0.0",
+    "enterprise_extensions>=3.0.2,<4.0.0",
+    "h5py>=3.11.0,<4.0.0",
+    "kalepy>=1.4,<2.0.0",
+    "KDEpy>=1.1.0,<2.0.0",
+    "la_forge>=1.1.0,<2.0.0",
+    "natsort>=8.4.0,<9.0.0",
+    "PTMCMCSampler>=2.1.2,<3.0.0",
+]
+
+[project.optional-dependencies]
+GP = ["holodeck-gw>=1.0.0,<2.0.0"]
+
+[tool.setuptools.packages.find]
+include = ["ceffyl"]
