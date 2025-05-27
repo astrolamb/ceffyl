@@ -21,10 +21,10 @@ Example:
     the frequencies in `f`.
 """
 # imports
+from types import MethodType
 import numpy as np
 from numpy.typing import NDArray
 import enterprise.constants as const
-from types import MethodType
 
 
 def powerlaw(f: NDArray,
