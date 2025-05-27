@@ -52,44 +52,10 @@ from typing import Any
 import os
 import webbrowser
 import numpy as np
-from ceffyl import models
-from ceffyl.parameter import Uniform
-from ceffyl.utils import frequencies
-from typing import Any
 from numpy.typing import NDArray
-from types import ModuleType
-
-
-class Pulsar:
-    """
-    A class to store information about a pulsar.
-
-    The Pulsar class is a class to store information about a pulsar in a
-    pulsar timing array. The class is designed to be used in the Ceffyl class
-    to store information about the pulsars in the pulsar timing array.
-
-    Args:
-
-    """
-    def __init__(self, name, freqs, logpdf, log10rhogrid, tspan):
-        """
-        Initialise a Pulsar object with information about a pulsar.
-
-        Args:
-            name:
-                The name of the pulsar.
-            freqs:
-                The frequencies of the pulsar data.
-            density:
-                The density of the pulsar data.
-            tspan:
-                The time span of the pulsar data.
-        """
-        self.name = name
-        self.freqs = freqs
-        self.logpdf = logpdf
-        self.log10rhogrid = log10rhogrid
-        self.tspan = tspan
+from ceffyl import models
+from ceffyl.priors import Uniform
+from ceffyl.pulsar import Pulsar, Frequencies
 
 
 class Spectrum:
