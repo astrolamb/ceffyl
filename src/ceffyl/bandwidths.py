@@ -33,9 +33,9 @@ from scipy import optimize
 from numba import jit, prange
 
 
-def _SD(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
+def _sd(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
     """
-    Equation 12.1 from [1] for a Gaussian kernel, where r'$\phi^\mathrm{iv}$' is
+    Equation 12.1 from [1] for a Gaussian kernel, where :math:'\phi^\mathrm{iv}' is
     the fourth derivitive of the Gaussian.
 
     Parameters
@@ -52,7 +52,7 @@ def _SD(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
     Returns
     -------
     float
-        The value of r'$\hat{S}_D(h)' from [1]
+        The value of r'\hat{S}_D(h)' from [1]
 
     References
     ----------
@@ -71,7 +71,7 @@ def _SD(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
     return u
 
 
-def _TD(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
+def _td(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
     """
     Equation 12.2 from [1] for a Gaussian kernel, where r'$\phi^\mathrm{iv}$' is
     the fourth derivitive of the Gaussian.
@@ -204,18 +204,18 @@ def sj_dpi(x: np.ndarray, nbin: int=10000):
 
     d, cnt = _pairwise_binned_distance(nbin, np.array(x))
 
-    TDb = -_TD(n, d, cnt, b)  # TDh
+    td_b = -_td(n, d, cnt, b)  # TDh
 
-    if((np.isfinite(TDb).all() is False) or (TDb <= 0).any()):
+    if((np.isfinite(td_b).all() is False) or (td_b <= 0).any()):
         raise ValueError("Sample is too sparse")
 
-    SDa = _SD(n, d, cnt, (2.394/(n * TDb))**(1/7))
+    sd_a = _sd(n, d, cnt, (2.394/(n * td_b))**(1/7))
 
-    res = (c1 / SDa)**0.2
+    res = (c1 / sd_a)**0.2
     return res
 
 
-def fSD(
+def f_sd(
         h: float,
         c1: float,
         alph2: float,
@@ -224,8 +224,8 @@ def fSD(
         cnt: np.ndarray
         ) -> float:
     """Function to call _SD for Newton-Raphson method to solve Eq. 12"""
-    SDh = _SD(n, d, cnt, alph2 * h**(5/7))
-    return (c1 / SDh)**0.2 - h
+    sd_h = _sd(n, d, cnt, alph2 * h**(5/7))
+    return (c1 / sd_h)**0.2 - h
 
 
 def sj_ste(x: np.ndarray,
@@ -289,13 +289,13 @@ def sj_ste(x: np.ndarray,
     d, cnt = _pairwise_binned_distance(nbin, np.array(x))
     d, cnt = np.array(d), np.array(cnt)
 
-    TDb = -_TD(n, d, cnt, b)
-    SDa = _SD(n, d, cnt, a)
+    td_b = -_td(n, d, cnt, b)
+    sd_a = _sd(n, d, cnt, a)
 
-    if((np.isfinite(TDb).all() is False) or (TDb <= 0).any()):
+    if((np.isfinite(td_b).all() is False) or (td_b <= 0).any()):
         raise ValueError("Sample is too sparse")
 
-    alph2 = 1.357*(SDa / TDb)**(1/7)  # equation 12 from [1]
+    alph2 = 1.357*(sd_a / td_b)**(1/7)  # equation 12 from [1]
 
     if np.isfinite(alph2).all() is False:
         raise ValueError("Sample is too sparse")
@@ -311,7 +311,8 @@ def sj_ste(x: np.ndarray,
 
     itry = 0
     while(
-        fSD(lower, c1, alph2, n, d, cnt) * fSD(upper, c1, alph2, n, d, cnt) > 0
+        f_sd(lower, c1, alph2, n, d, cnt) *
+        f_sd(upper, c1, alph2, n, d, cnt) > 0
         ):
 
         if itry > 99:
@@ -328,10 +329,10 @@ def sj_ste(x: np.ndarray,
                 f"[{lower}, {upper}]")
 
         itry += 1
-    
+
     if tol is None:
         tol = 0.1 * lower
 
     args = (c1, alph2, n, d, cnt)
-    res = optimize.newton(fSD, (lower+upper)/2, tol=tol, args=args)
+    res = optimize.newton(f_sd, (lower+upper)/2, tol=tol, args=args)
     return res
