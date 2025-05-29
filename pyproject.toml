@@ -19,6 +19,7 @@ dependencies = [
     "KDEpy>=1.1.0,<2.0.0",
     "la_forge>=1.1.0,<2.0.0",
     "natsort>=8.4.0,<9.0.0",
+    "numpy>=1.23.5,<3.0.0",
     "PTMCMCSampler>=2.1.2,<3.0.0",
 ]
 
