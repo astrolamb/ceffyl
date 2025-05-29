@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ceffyl"
-version = "1.41"
+version = "1.41.1"
 description = "Software to rapidly and flexibly analyse Pulsar Timing Array data via factorised likelihood methods (Lamb et al. 2023)"
 authors = [
   { name = "William G. Lamb", email = "william.g.lamb@vanderbilt.edu" },
