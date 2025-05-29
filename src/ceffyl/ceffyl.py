@@ -282,7 +282,7 @@ class Ceffyl:
         else:
             self.tspan = tspan
         self.rho_labels = np.loadtxt(f'{datadir}/log10rholabels.txt',
-                                     dtype=np.unicode_, ndmin=1)
+                                     dtype=np.str_, ndmin=1)
 
         rho_grid = np.load(f'{datadir}/log10rhogrid.npy')
 
@@ -295,14 +295,14 @@ class Ceffyl:
         # selected pulsars
         if pulsar_list is None:
             self.pulsar_list = list(np.loadtxt(f'{datadir}/pulsar_list.txt',
-                                               dtype=np.unicode_, ndmin=1))
+                                               dtype=np.str_, ndmin=1))
         else:
             self.pulsar_list = pulsar_list
         self.n_psrs = len(self.pulsar_list)
 
         # find index of sublist
         file_psrs = list(np.loadtxt(f'{datadir}/pulsar_list.txt',
-                                    dtype=np.unicode_, ndmin=1))
+                                    dtype=np.str_, ndmin=1))
         selected_psrs = [file_psrs.index(p) for p in self.pulsar_list]
 
         # load densities from npy binary file for given psrs
