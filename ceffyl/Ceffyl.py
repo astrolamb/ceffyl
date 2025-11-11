@@ -391,6 +391,8 @@ class ceffyl():
 
             self.hist_cumulative = hist_cumulative
             self.binmid = binmid
+        
+        return self
 
     def ln_prior(self, xs: NDArray) -> float:
         """
