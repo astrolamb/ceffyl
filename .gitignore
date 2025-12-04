@@ -140,3 +140,6 @@ ceffyl/bw/cbandwidths.c
 *.pyc
 build_artifacts
 # conda smithy ci-skeleton end
+
+# apple's junk
+.DS_Store

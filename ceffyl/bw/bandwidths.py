@@ -35,7 +35,7 @@ from numba import jit, prange
 
 def _SD(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
     """
-    Equation 12.1 from [1] for a Gaussian kernel, where r'$\phi^\mathrm{iv}$' is
+    Equation 12.1 from [1] for a Gaussian kernel, where r"$\\phi^\\mathrm{iv}$" is
     the fourth derivitive of the Gaussian.
 
     Parameters
@@ -52,7 +52,7 @@ def _SD(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
     Returns
     -------
     float
-        The value of r'$\hat{S}_D(h)' from [1]
+        The value of r'$\\hat{S}_D(h)' from [1]
 
     References
     ----------
@@ -73,7 +73,7 @@ def _SD(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
 
 def _TD(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
     """
-    Equation 12.2 from [1] for a Gaussian kernel, where r'$\phi^\mathrm{iv}$' is
+    Equation 12.2 from [1] for a Gaussian kernel, where r'$\\phi^\\mathrm{iv}$' is
     the fourth derivitive of the Gaussian.
 
     Parameters
@@ -90,7 +90,7 @@ def _TD(n: float, d: np.ndarray, cnt: np.ndarray, h: float) -> float:
     Returns
     -------
     float
-        The value of r'$\hat{T}_D(h)' from [1]
+        The value of r'$\\hat{T}_D(h)' from [1]
 
     References
     ----------
