@@ -11,26 +11,22 @@ This can be done by fitting to a free spectrum of the entire PTA or individual p
 
 ## Installation
 
-It is *highly recommended* that you install enterprise-pulsar first via conda-forge before installing ceffyl
-
 To install via `pip'
 ```bash
-conda create -n new_env python=3.10
-conda activate <new_env>
 pip install ceffyl
-pip install --no-deps enterprise-pulsar
 ```
 
-To install via Anaconda:
+To install via conda-forge:
 ```bash
-conda create -n <new_env> python enterprise-pulsar
-conda activate <new_env>
 conda install -c conda-forge ceffyl
 ```
-**Then update to the latest version using github and pip!**
+### Are you using an Apple Silicon device?
+When you create a new anaconda environment, ensure that you have specified ``--platform osx-64`` to ensure that dependencies can be installed.
 
-This is because we use enterprise as a dependency. Enterprise requires tempo2. Tempo2 is notoriously difficult to install directly...
-We plan to remove this dependency in a future update.
+For example:
+```bash
+conda create --platform osx-64 -n ceffyl -c conda-forge python=3.11 ceffyl
+```
 
 ## data
 Download representations of PTA data to accurately fit spectral models with ceffyl!
@@ -71,3 +67,6 @@ Do you have your own free spectrum posteriors that you want to work in ceffyl? L
   publisher={APS}
 }
 ```
+
+## Are you interested in 'New Physics'?
+Then check out [PTArcade!](https://andrea-mitridate.github.io/PTArcade/) It uses ``ceffyl`` as its default engine to fit cosmological spectra to PTA data in a friendly interface. (Remember to cite ``ceffyl`` if you use it!)
