@@ -3,7 +3,7 @@ A class to create density estimators of pulsar timing array data
 """
 
 import numpy as np
-from ceffyl.bw import bandwidths as bw
+from ceffyl import bandwidths as bw
 from emcee.autocorr import integrated_time
 import la_forge.core as co
 import glob
