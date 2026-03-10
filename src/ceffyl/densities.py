@@ -1,17 +1,17 @@
 """
 A module to create density estimators of Bayesian MCMC posteriors for pulsars
 
-This module contains the `DE_Factory` class, which is designed to create
+This module contains the `ChainProcessor` class, which is designed to create
 density estimators of Bayesian MCMC posteriors for pulsars. It can handle
 multiple pulsars and their respective MCMC chains, compute bandwidths for
 the density estimators, and generate kernel density estimates (KDEs) of
 the Bayesian posteriors. The module supports both single pulsar analyses
-and PTA free spectrum analyses, allowing for flexible handling of pulsar
-data. It also includes methods for saving the computed densities and
-metadata to files, making it suitable for further analysis or visualization.
+and PTA free spectrum analyses, and generally any PTA MCMC posterior, allowing
+for flexible handling of pulsar data. It also includes methods for saving the
+computed densities and metadata to files, making it suitable for further
+analysis or visualization.
 """
 
-import time
 from types import MethodType
 from typing import Any
 import itertools
@@ -22,12 +22,12 @@ from emcee.autocorr import integrated_time
 from KDEpy import FFTKDE
 from numpy.typing import NDArray
 from ceffyl import bandwidths as bw
-from ceffyl.pulsar import PTAData
+from ceffyl.ptadata import PTAData
 try:
     from joblib import Parallel, delayed
-    no_joblib = False
+    NO_JOBLIB = False
 except ImportError:
-    no_joblib = True
+    NO_JOBLIB = True
     print('Joblib cannot be found. You cannot setup densities for multiple '
           'pulsars simultaneously.')
 
@@ -59,8 +59,6 @@ class ChainProcessor:
             list of parameter labels to save
         freqs : NDArray
             1D array of frequencies corresponding to the MCMC chains.
-            This should have the same length as the number of frequencies in
-            the chains. If None, it will be set to a default range.
 
         Raises
         ------
@@ -98,19 +96,18 @@ class ChainProcessor:
         >>> print(processor.n_freqs)  # Output: 5
         >>> print(processor.n_samples)  # Output: 1000
         >>> print(processor.pulsar_names)  # Output: ['psr_1', 'psr_2', 'psr_3']
-        >>> print(processor.param_labels)  # Output: ['log10_rho_1', 'log10_rho_2', ..., 'log10_rho_5']
+        >>> print(processor.param_labels)  # Output: ['log10_rho_1',
+                                                      'log10_rho_2', ...,
+                                                      'log10_rho_5']
         >>> print(processor.freqs)  # Output: [1.e-09 2.e-09 3.e-09 4.e-09 5.e-09]
         >>> print(processor.chains.shape)  # Output: (3, 5, 1000)
         
         """
         # save chains
         self.chains = chains
-        self.n_psrs, self.n_freqs, self.n_samples = chains.shape
-d
-        if freqs.shape[0] != self.n_freqs:
-            raise ValueError("Length of freqs must match the number of "
-                             "frequencies in chains.")
+        self.n_psrs, self.n_params, self.n_samples = chains.shape
         self.freqs = freqs
+        self.n_freqs = len(freqs)
 
         if pulsar_names is not None:  # save pulsar names
             self.pulsar_names = pulsar_names
@@ -135,7 +132,8 @@ d
                   bw_func: MethodType = bw.sj_ste,
                   thin_chain: bool = False,
                   kernel_constant: float = 1.,
-                  bw_kwargs: dict[str, Any] = None) -> float:
+                  bw_kwargs: dict[str, Any] = None
+                  ) -> float:
         """
         Method to calculate bandwidth for a given MCMC chain
 
@@ -159,7 +157,7 @@ d
         """
 
         if thin_chain:  # chain thinning using emcee
-            thin = round(integrated_time(data)[0])
+            thin = round(integrated_time(data, quiet=True)[0])
             if thin == 0:  # if thin = 0, thinning will fail
                 thin = 1
         else:
@@ -223,7 +221,7 @@ d
         data = data[data < density_grid.max()]
 
         if thin_chain:  # chain thinning using emcee
-            thin = round(integrated_time(data)[0])
+            thin = round(integrated_time(data, quiet=True)[0])
             if thin == 0:  # if thin=0, thinning will fail
                 thin = 1
         else:
@@ -369,9 +367,6 @@ d
         num_threads : int
             Number of threads to use for parallel processing. Default = 1.
             If set to 1, no parallel processing is used.
-        no_joblib : bool
-            If True, do not use joblib for parallel processing. Default = False.
-            If joblib is not installed, this will be set to True automatically.
 
         Returns
         -------
@@ -383,8 +378,8 @@ d
         # significant numerical calculations!
         if not os.path.exists(outdir):
             os.makedirs(outdir)
-        
-        if no_joblib:
+
+        if NO_JOBLIB:
             ansp = []
             for ii in range(self.n_psrs):
                 ansp.append(self.parallelise(ii,
@@ -409,9 +404,9 @@ d
 
         # calculating densities for each freq for each psr
         pdfs, bws = [], []
-        for ii, _ in enumerate(ansp):
-            pdfs.append(ansp[ii][0])
-            bws.append(ansp[ii][1])
+        for an in ansp:
+            pdfs.append(an[0])
+            bws.append(an[1])
         del ansp
 
         pdfs = list(itertools.chain.from_iterable(pdfs))
@@ -426,6 +421,11 @@ d
         if log_infinitessimal is not None:
             infs = np.isneginf(pdfs)
             pdfs[infs] = log_infinitessimal
+
+        # if any logpdfs below log_infinitessimal, set to log_infinitessimal
+        if log_infinitessimal is not None:
+            too_small = pdfs < log_infinitessimal
+            pdfs[too_small] = log_infinitessimal
 
         if change_nans:  # if nans, convert to log infinitessimal
             print('Removing NaNs from pdfs')
