@@ -47,7 +47,7 @@ Classes:
 """
 
 # imports
-from types import ModuleType
+from types import ModuleType, MethodType
 from typing import Any
 import os
 import webbrowser
@@ -55,45 +55,56 @@ import numpy as np
 from numpy.typing import NDArray
 from ceffyl import models
 from ceffyl.priors import Uniform
-from ceffyl.pulsar import Pulsar, Frequencies
+from ceffyl.ptadata import PTAData
+
+# if available, import jax and numpyro for probabilistic programming
+try:
+    from jax.scipy.stats import uniform as jax_uniform, norm as jax_norm
+    from numpyro.distributions import (Uniform as NumpyroUniform,
+                                       Normal as NumpyroNormal)
+except ImportError:
+    pass
 
 
 class Spectrum:
     """
-    A class to add spectra to free spectra for fitting in Ceffyl.
-
-    The Spectrum class is a class to create a noise spectrum from a given
-    GW source. The class is designed to model a common red process (e.g. a GW
-    signal) or an individual red process (e.g. intrinsic red noise) for a
-    pulsar timing array. The class is designed to be used in the Ceffyl class
-    to fit noise spectra to a free spectrum of pulsar timing array data.
+    A class to define a spectral model for a pulsar timing array signal. The
+    class is designed to model a common red process (e.g. a GW signal) or an
+    individual red process (e.g. intrinsic red noise). The class is designed to
+    be used in the Ceffyl class to fit noise spectra to a KDE representation of
+    an MCMC posterior from a PTA analysis. The class contains methods to
+    calculate the logpdf of proposed parameters given the priors,
+    to calculate the PSD of proposed parameters from a given PSD function,
+    and to sample from the priors.
 
     Args:
 
     """
     def __init__(
         self,
-        psrs: Pulsar | list[Pulsar],
+        ptadata: PTAData,
         nfreqs: int,
-        tspan: float = None,
         psd: ModuleType = models.powerlaw,
-        params: list | np.ndarray = None,
+        priors: list = None,
+        const_params: dict = None,
         common_process: bool = True,
-        name: str = 'gw_',
-        psd_kwargs: dict = None
+        name: str = 'gw',
+        psd_kwargs: dict = None,
+        selected_psrs: list[str] = None,
+        df: float = None,
     ):
         """
         Initialise a signal class to model intrinsic red noise or a common
         process
 
         Args:
-            N_freqs:
+            n_freqs:
                 Number of frequencies for this signal. Expected to be equal
                 or less than the number of frequencies used to preproces data.
-                This fits the first N_freqs frequencies to the data
+                This fits the first n_freqs frequencies to the data
             freq_idxs:
                 an array of indices of frequencies to fit to data. This
-                is an alternative to N_freqs. e.g. if you'd like
+                is an alternative to n_freqs. e.g. if you'd like
                           to fit data to every second frequency, input
                           freq_idxs=[0,2,4,6,...]
             selected_psrs:
@@ -125,58 +136,48 @@ class Spectrum:
                 A dictionary of kwargs for your selected PSD
                            function)
         """
-        # set default parameters if none given
-        if params is None:
-            params = [Uniform(-18, -12, name='log10_A'),
-                      Uniform(0, 7, name='gamma')]
-
-        # saving class information as properties
-        self.name = name
-        self.common_process = common_process
-
+        self.ptadata = ptadata
         self.nfreqs = nfreqs
-        if tspan is None:
-            tspan = np.zeros(len(psrs))
-            for ii, p in enumerate(psrs):
-                tspan[ii] = p.tspan
-
-        # saving metadata to class
         self.psd = psd
-        self.psd_priors = params
-        self.n_priors = len(params)
-        self.const_params = const_params
-        self.psd_kwargs = psd_kwargs
-        self.psr_idx = []  # to be save later in Ceffyl class
+        self.const_params = const_params if const_params is not None else {}
+        self.common_process = common_process
+        self.name = name
+        self.psd_kwargs = psd_kwargs if psd_kwargs is not None else {}
+
+        if df is None:
+            self.df = 1 / ptadata.tspan
+
+        # set default parameters if none given
+        if priors is None:
+            priors = [Uniform(-18, -12, name='log10_A'),
+                      Uniform(0, 7, name='gamma')]
+        self.priors = priors
+
+        if selected_psrs is None:
+            selected_psrs = ptadata.pulsar_names
+        self.selected_psrs = selected_psrs
 
         # save this information if signal is common to all pulsars
         if common_process:
-            self.cp = True
-            self.selected_psrs = selected_psrs
-
             param_names = []
-            for p in params:
+            for p in priors:
                 if p.size is None or p.size == 1:
-                    param_names.append(f'{name}{p.name}')
+                    param_names.append(f'{name}_{p.name}')
                 else:
-                    param_names.extend([f'{name}{p.name}_{ii}'
+                    param_names.extend([f'{name}_{p.name}_{ii}'
                                         for ii in range(p.size)])
             self.param_names = param_names
             self.n_params = len(param_names)
-            self.params = params
-            self.length = len(params)
+            self.priors = priors
 
             # tuple to reshape xs for vectorised computation
-            self.reshape = (1, 1, len(params))
+            self.reshape = (1, len(priors))
 
         # else save this information if signal is not common
         # it essentially multiplies lists across psrs for easy mapping
-        else:
-            self.cp = False
-            self.selected_psrs = selected_psrs
-            self.n_psrs = len(selected_psrs)
-
+        else:        
             param_names = []
-            for p in params:
+            for p in priors:
                 if p.size is None or p.size == 1:
                     param_names.extend(
                         [f'{q}_{name}_{p.name}' for q in selected_psrs]
@@ -190,16 +191,16 @@ class Spectrum:
             self.param_names = param_names
 
             self.param_names = [f'{name}{q}_{p.name}' for q in
-                                selected_psrs for p in params]
+                                selected_psrs for p in priors]
 
             self.n_params = len(self.param_names)
-            self.params = params*self.N_psrs
-            self.length = len(self.params)
+            self.priors = priors * len(selected_psrs)
+            self.length = len(self.priors)
 
             # tuple to reshape xs for vectorised computation
-            self.reshape = (1, len(selected_psrs), len(params))
+            self.reshape = (len(selected_psrs), len(priors))
 
-            self.cp_signals, self.red_signals = [], []
+        self.cp_signals, self.red_signals = [], []
 
     def get_logpdf(self, xs):
         """
@@ -216,12 +217,11 @@ class Spectrum:
             logpdf of proposed parameters for the given models and parameters
         """
         # require 2 x sum of list of arrays
-        return np.sum([p.get_logpdf(x) for p, x in zip(self.params, xs)])
+        return np.sum([p.logpdf(x) for p, x in zip(self.priors, xs)])
 
     def get_rho(self,
                 freqs: NDArray,
-                mapped_xs: dict[str, Any],
-                tspan: float
+                mapped_xs: dict[str, Any]
                 ) -> NDArray:
         """
         A method to calculate PSD of proposed values from given psd function
@@ -241,8 +241,9 @@ class Spectrum:
         rho : NDArray
             array of PSDs in shape (N_p x N_f)
         """
-        rho = self.psd(freqs, tspan, **mapped_xs, **self.const_params,
-                       **self.psd_kwargs).T
+        
+        rho = self.psd(freqs, self.df, **mapped_xs, **self.const_params,
+                       **self.psd_kwargs)
 
         return rho
 
@@ -255,7 +256,7 @@ class Spectrum:
         samples : NDArray
             array of samples from each parameter
         """
-        return np.hstack([p.sample() for p in self.params])
+        return np.hstack([p.sample() for p in self.priors])
 
 
 class Ceffyl:
@@ -263,115 +264,39 @@ class Ceffyl:
     A class to fit signals to free spectra to derive the signals' spectral
     characteristics via sampling methods
     """
-    def __init__(self, pulsar_list: list[Pulsar] = None,
-                 spectra: list[Spectrum] = None,):
+    def __init__(self,
+                 ptadata: PTAData | list[PTAData],
+                 spectra: list[Spectrum],
+                 ):
         """
         Initialise the Ceffyl object
         
         Args:
             pulsar_list: A list of Pulsar objects
         """
-
-        # saving properties
-        self.freqs = np.load(f'{datadir}/freqs.npy')
-        self.n_freqs = self.freqs.size
-        self.reshaped_freqs = self.freqs.reshape((1, self.N_freqs)).T
-        if tspan is None:
-            self.tspan = 1/self.freqs[0]
+        if isinstance(ptadata, PTAData):
+            self.ptadata = [ptadata]
         else:
-            self.tspan = tspan
-        self.rho_labels = np.loadtxt(f'{datadir}/log10rholabels.txt',
-                                     dtype=np.unicode_, ndmin=1)
-
-        rho_grid = np.load(f'{datadir}/log10rhogrid.npy')
-
-        db = rho_grid[1] - rho_grid[0]
-        binedges = rho_grid - 0.5*db
-        binedges = np.append(binedges, binedges[-1]+0.5*db)
-
-        self.rho_grid, self.binedges, self.db = rho_grid, binedges, db
-
-        # selected pulsars
-        if pulsar_list is None:
-            self.pulsar_list = list(np.loadtxt(f'{datadir}/pulsar_list.txt',
-                                               dtype=np.str_, ndmin=1))
-        else:
-            self.pulsar_list = pulsar_list
-        self.n_psrs = len(self.pulsar_list)
-
-        # find index of sublist
-        file_psrs = list(np.loadtxt(f'{datadir}/pulsar_list.txt',
-                                    dtype=np.str_, ndmin=1))
-        selected_psrs = [file_psrs.index(p) for p in self.pulsar_list]
-
-        # load densities from npy binary file for given psrs
-        density_file = f'{datadir}/density.npy'
-        density = np.load(density_file, allow_pickle=True)[selected_psrs]
-
-        self.density = np.nan_to_num(density, nan=-36.)
-
+            self.ptadata = ptadata
+        
+        self.spectra = spectra
         self.cp_signals, self.red_signals = [], []
-
-    def add_signals(self,
-                    signals: list[MethodType],
-                    inverse_transform: bool = False,
-                    nested_posterior_sample_size: int = 100000
-                    ) -> MethodType:
-        """
-        Method to add signals to the ceffyl object.
-        Note: using this method erases previous signals added to instance!
-
-        TO DO
-        -----
-            * ensure that adding signals doesn't erase previously added signals
-            * intrinsic red noise free spectrum
-
-        Parameters
-        ----------
-        signals : list[MethodType]
-            list of Ceffyl.signal objects
-        inverse_transform : bool
-            flag to compute inverse transforms for use in nested samplers.
-            Will soon be depreciated in favour of computing point-percentile
-            functions
-        nested_posterior_sample_size : int
-            number of samples to setup posterior histograms for nested sampling
-
-        Raises
-        ------
-        TypeError
-            if signals aren't supplied as a list
-        ValueError
-            if pulsars defined in signal object mismatch pulsars in dataset
-        """
-
-        # check if signals is a list
-        if not isinstance(signals, list):
-            raise TypeError("Please supply of signals as a list")
-
-        # cycle through signals and defined pulsar names
-        for s in signals:
-            if s.selected_psrs is None:
-                s.selected_psrs = self.pulsar_list
-
-            self.n_psrs = len(s.selected_psrs)  # save number of psrs
-
-            if not np.isin(s.selected_psrs, self.pulsar_list).all():
-                raise ValueError('Mismatch between density array pulsars and'
-                                 'the pulsars you selected')
-            else:  # save idx of (subset of) psrs within larger list
-                s.psr_idx = np.array([list(self.pulsar_list).index(p)
-                                      for p in s.selected_psrs])
-            
-            self.N_psrs = len(s.selected_psrs)  # save number of psrs
-
-        # precomputing parameter locations in proposed arrays
-        idx = 0
-        for s in signals:
-            pmap = []
-            if s.CP:
+        for s in spectra:
+            if s.common_process:
                 self.cp_signals.append(s)
-                for p in s.params:
+            else:
+                self.red_signals.append(s)
+        
+        pulsar_names = set()
+        for s in spectra:
+            pulsar_names.update(s.selected_psrs)
+        self.pulsar_names = list(pulsar_names)
+
+        idx = 0
+        for s in spectra:
+            pmap = []
+            if s.common_process:
+                for p in s.priors:
                     if p.size is None or p.size == 1:
                         pmap.append(list(np.arange(idx, idx+1)))
                         idx += 1
@@ -381,15 +306,14 @@ class Ceffyl:
                 s.pmap = pmap
 
             else:
-                self.red_signals.append(s)
-                id_irn = id
-                for ii, p in enumerate(s.psd_priors):
+                id_irn = idx
+                for ii, p in enumerate(s.priors):
                     if p.size is None or p.size == 1:
                         pmap.append(list(np.arange(id_irn+ii,
-                                                   id_irn+s.N_params,
-                                                   s.N_priors)))
+                                                   id_irn+s.n_params,
+                                                   s.length)))
                     else:
-                        if len(s.psd_priors) > 1:
+                        if len(s.priors) > 1:
                             raise TypeError("Sorry, ceffyl can't manage more" +
                                             " than one parameter if a " +
                                             "parameter has size > 1")
@@ -399,57 +323,23 @@ class Ceffyl:
                             pmap.extend(list(array.reshape(npsr, p.size)))
 
                 if p.size is None or p.size == 1:
-                    idx += s.N_params
+                    idx += s.n_params
                 else:
                     idx += npsr * p.size
 
                 s.pmap = pmap
-
-        # create list of index grids for vectorised searching
-        for s in signals:
-            s.ixgrid = np.ix_(s.psr_idx, s.freq_idxs)
-
-        self.signals = signals  # save array of signals
-
-        # save complete array of parameters
-        self.param_names = list(np.hstack([s.param_names for s in signals]))
-        self.params = list(np.hstack([s.params for s in signals]))
-        self.ndim = len(self.param_names)
-
-        # only use max number of frequencies
-        # TODO: check if this works when using freq_idxs
-        self.N_freqs = max([s.N_freqs for s in signals])
-
-        # setup empty 2d grid to vectorize product of pdfs
-        self._I, self._J = np.ogrid[:self.n_psrs, :self.N_freqs]
-
-        # information for nested sampling
-        if inverse_transform:
-            print('Inverse transform sampling method will soon be depreciated')
-            print('Please update your version of enterprise to use PPF')
-            posterior_samples, hist_cumulative, binmid = [], [], []
-            for s in self.signals:  # iterate through signals
-                # if binmid is None:
-                for ii, p in enumerate(s.params):
-                    if p.size is None or p.size == 1:
-                        posterior_samples = [
-                            s.psd_priors[ii].sample() for jj in
-                            range(nested_posterior_sample_size)
-                            ]
-                        hist, bin_edges = np.histogram(posterior_samples,
-                                                       bins='fd')
-                        hist_cumulative.append(np.cumsum(hist/hist.sum()))
-                        binmid.append((bin_edges[:-1] + bin_edges[1:])/2)
-                    else:
-                        # FIX ME: nested sampling for free spec irn
-                        print('Free spectrum not supported with nested ' +
-                              'sampling yet!')
-                        hist_cumulative, binmid = None, None
-
-            self.hist_cumulative = hist_cumulative
-            self.binmid = binmid
         
-        return self
+        # create a list of sample mappings for vectorised searching
+        mapped_xs = []
+        for s in spectra:
+            s.ixgrid = np.ix_(s.selected_psrs, np.arange(s.nfreqs))
+            mapped_xs.append({s_i.name: s.params[p] for p, s_i in
+                              zip(s.pmap, s.priors)})
+        self.mapped_xs = mapped_xs
+
+        self._I, self._J = np.ogrid[:len(self.pulsar_names),
+                                    :max([s.nfreqs for s in spectra])]
+
 
     def ln_prior(self, xs: NDArray) -> float:
         """
@@ -467,34 +357,11 @@ class Ceffyl:
             summed logpdf of proposed parameters given signal priors
         """
         logpdf = 0  # total logpdf
-        for s in self.signals:  # iterate through signals
-            # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            mapped_x = [xs[p] for p in s.pmap]
-            logpdf += s.get_logpdf(mapped_x)
+        for s in self.spectra:  # iterate through signals
+            mxs = self.mapped_xs[s]
+            logpdf += np.sum([p.logpdf(x) for p, x in zip(s.priors, xs[mxs])])
 
         return logpdf
-
-    def transform_histogram(self, xs):
-        """
-        WILL SOON BE DEPRECIATED
-        prior function for using in nested samplers
-
-        it transforms the N-dimensional unit cube u to our prior range of
-        interest
-
-        tutorial for this function:
-        https://johannesbuchner.github.io/UltraNest/priors.html#Non-analytic-priors
-
-        @param u: N-dimensional unit cube
-        @return x: transformed prior
-        """
-        x = np.zeros_like(xs)
-        for s in self.signals:  # iterate through signals
-            for ii, p in enumerate(s.pmap):
-                x[p] = np.interp(xs[p], self.hist_cumulative[ii],
-                                 self.binmid[ii])
-
-        return x
     
     def hypercube(self, xs : NDArray) -> NDArray:
         """
@@ -511,15 +378,18 @@ class Ceffyl:
             array of point-percentile function of parameters given priors
         """
 
-        transformed_priors = np.array(
-            [p.ppf(x) for p, x in zip(self.params, xs)]
-        )
+        transformed_priors = []
+        for s in self.spectra:  # iterate through signals
+            mxs = self.mapped_xs[s]
+            transformed_priors.extend(
+                [p.ppf(x) for p, x in zip(s.priors, xs[mxs])]
+                )
 
         return transformed_priors
-
-    def ln_likelihood(self, xs: NDArray) -> np.float64:
+    
+    def ln_likelihood(self, xs: NDArray) -> float:
         """
-        vectorised log likelihood function for PTMCMC to calculate logpdf of
+        log likelihood function for PTMCMC to calculate logpdf of
         proposed values given KDE density array
 
         TO DO
@@ -533,48 +403,41 @@ class Ceffyl:
 
         Returns
         -------
-        logpdf : np.float64
+        logpdf : float
             total logpdf of proposed values given KDE density array
         """
 
-        # initalise array of rho values with lower prior boundary
-        red_rho = np.zeros((self.n_psrs, self.n_freqs))
-        cp_rho = np.zeros((self.n_psrs, self.n_freqs))
-        for s in self.red_signals:  # iterate through signals
+        # initalise array of rho values
+        rho = np.zeros((len(self.pulsar_names), max([s.nfreqs for s in self.spectra])))
+        for s in self.spectra:  # iterate through signals
             # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            mapped_xs = {s_i.name: xs[p]
-                         for p, s_i in zip(s.pmap, s.params)}
-            red_rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
-                                           Tspan=self.tspan,
-                                           mapped_xs=mapped_xs)
+            mxs = self.mapped_xs[s]
+            if s.common_process:
+                mapped_xs = {s_i.name: xs[mxs] for s_i in s.priors}
+            else:
+                mapped_xs = {s_i.name: xs[mxs].reshape(s.reshape) for s_i in s.priors}
+            rho[s.ixgrid] += s.get_rho(s.ptadata.freqs[s.freq_idxs], mapped_xs=mapped_xs)
 
-        for s in self.cp_signals:  # iterate through CP signals
-            # reshape array to vectorise to size (N_kwargs, N_sig_psrs)
-            mapped_xs = {s_i.name: xs[p]
-                         for p, s_i in zip(s.pmap, s.params)}
-            cp_rho[s.ixgrid] += s.get_rho(self.reshaped_freqs[s.freq_idxs],
-                                          Tspan=self.tspan,
-                                          mapped_xs=mapped_xs)
-
-        rho = red_rho + cp_rho  # total rho
         logrho = 0.5*np.log10(rho)  # calculate log10 root PSD
 
         # search for location of logrho values within grid
-        idx = np.searchsorted(self.binedges, logrho) - 1
-    
+        idx = np.searchsorted(self.ptadata.binedges, logrho) - 1
+
         idx[idx < 0] = 0  # if spectrum less than logrho, set to bottom boundary
 
-        # if any spectrum greater than top boundary, set logprob to -np.inf
-        # else compute probability given data
-        if (idx >= self.rho_grid.shape[0]).any():
-            return -np.inf
+        # create a mask to temporarily deal with spectra greater than top
+        # boundary
+        mask = idx >= self.ptadata.rho_grid.shape[0]
+        idx[mask] = -1  # set spectra greater than top boundary to top boundary for now
 
-        idx[idx < 0] = 0  # if spectrum less than logrho, set to lower boundary
+        logpdf = self.ptadata.log_densities[self._I, self._J, idx]  # logpdf of rho values
 
-        logpdf = self.density[self._I, self._J, idx]  # logpdf of rho values
+        # upper boundary of grid is set to small value
+        logpdf[mask] = -36.
 
-        logpdf += np.log(self.db)  # integration infinitessimal
+        logpdf += np.log(self.ptadata.grid_delta)  # integration infinitessimal
         return np.sum(logpdf)
+
 
     def initial_samples(self) -> NDArray:
         """
