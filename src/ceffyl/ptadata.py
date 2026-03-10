@@ -95,6 +95,7 @@ class PTAData:
         self.freqs = freqs
         self.log_densities = log_densities
         self.density_grid = density_grid
+        self.grid_delta = density_grid[1] - density_grid[0]
         self.param_labels = param_labels
         self.tspan = tspan
         if chain_processing_details is None:
