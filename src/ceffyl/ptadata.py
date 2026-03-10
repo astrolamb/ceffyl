@@ -103,18 +103,15 @@ class PTAData:
             self.chain_processing_details = chain_processing_details
 
     def __repr__(self):
-        return (f"PTAData(pulsar_names={self.pulsar_names}, "
-                f"freqs={self.freqs}, "
-                f"log_densities={self.log_densities}, "
-                f"density_grid={self.density_grid}, "
-                f"tspan={self.tspan})")
+        return (f"PTAData(pulsar_names={self.pulsar_names}\n"
+                f"freqs={self.freqs/1e-9: .2f} nHz")
 
     def __str__(self):
         return (f"PTAData with {len(self.pulsar_names)} pulsars, "
                 f"{self.num_frequencies()} frequencies, "
-                f"log densities shape: {self.log_densities.shape}, "
-                f"density grid shape: {self.density_grid.shape}, "
-                f"time span: {self.tspan}")
+                f"density_grid_limits=({self.density_grid[0]: .2f}\n"
+                                       f"{self.density_grid[-1]: .2f}) s^2\n"
+                f"tspan={self.tspan/365.24/86400} yrs)")
 
     def get_pulsar_names(self) -> str:
         """Return the names of the pulsars."""
@@ -124,7 +121,9 @@ class PTAData:
         """Return the frequencies of the pulsar."""
         return self.freqs
 
-    def get_freqs_from_indices(self, indices: NDArray[np.int64]) -> NDArray[np.float64]:
+    def get_freqs_from_indices(self,
+                               indices: NDArray[np.int64]
+                              ) -> NDArray[np.float64]:
         """
         Return the frequencies corresponding to the given indices.
 
