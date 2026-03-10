@@ -163,7 +163,7 @@ class DE_factory:
                 supress_warnings: bool = True,
                 return_kde: bool = False,
                 kde_kwargs: dict[str, Any] = {}
-                ) -> NDArray | (NDArray, MethodType):
+                ): #-> NDArray | (NDArray, MethodType):
         """
         Method to create KDE objects for an MCMC data chain
 
