@@ -129,9 +129,16 @@ dmypy.json
 .pyre/
 
 # MCMC chain files
-.txt
-.npy
-.core
+*.hdf5
+*.core
+*covarianceJumpProposal*
+*cov.npy
+*draw_from*
+*DEJump*.txt
+*pars.txt
+*chain*.txt
+*priors.txt
+*jumps.txt
 
 # ignore created .c file
 ceffyl/bw/cbandwidths.c
