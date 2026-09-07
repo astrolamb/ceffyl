@@ -82,9 +82,9 @@ def broken_powerlaw(f: NDArray,
                     Tspan: float,
                     log10_A: float = -15.,
                     gamma: float = 13/3,
-                    delta: float = 0.1,
+                    delta: float = 0.,
                     log10_fb: float = -9.,
-                    kappa: float = 0.) -> NDArray:
+                    smooth: float = 0.1) -> NDArray:
     """
     Generic broken powerlaw spectrum
 
@@ -112,7 +112,7 @@ def broken_powerlaw(f: NDArray,
     """
     hcf = (10 ** log10_A
            * (f / const.fyr) ** ((3 - gamma) / 2)
-           * (1+(f/10**log10_fb)**(1/kappa)) ** (kappa * (gamma - delta) / 2))
+           * (1+(f/10**log10_fb)**(1/smooth)) ** (smooth * (gamma - delta) / 2))
     return hcf ** 2 / (12*np.pi**2 * f**3) / Tspan
 
 
